@@ -7,6 +7,7 @@ Alle Rechte vorbehalten
 """
 
 
+```python
 import streamlit as st
 import pandas as pd
 import os
@@ -20,8 +21,8 @@ from datetime import datetime, date
 # Dateiname für das Speichern der Anmeldungen
 EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
 
-# Unterstützt sowohl den Standardnamen als auch Ihren Original-Dateinamen
-STAMMDATEN_DATEIEN = ["2026.xlsx", "katzen_stammdaten.xlsx"]
+# Unterstützt sowohl den Dateinamen deiner hochgeladenen CSV als auch Excel-Varianten
+STAMMDATEN_DATEIEN = ["2026.xlsx - Sheet1.csv", "2026.xlsx", "katzen_stammdaten.xlsx"]
 
 # Seite konfigurieren
 st.set_page_config(page_title="FFH Ausstellungs-Anmeldung", layout="centered")
@@ -53,8 +54,8 @@ for key, val in session_defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# Hilfsfunktion: Float-Bereinigung für Nummern
-def bereinige_nummer_string(wert):
+# Hilfsfunktion: Wandelt NaN-Werte aus der Excel/CSV in saubere Leerstrings um
+def safe_str(wert):
     if pd.isna(wert):
         return ""
     text = str(wert).strip()
@@ -75,15 +76,34 @@ def extrahiere_ziffern(wert):
 
 # Automatischer Stammdaten-Lader (unterstützt Excel und CSV flexibel)
 def lade_stammdaten():
-    dateien = os.listdir(".")
-    for d in dateien:
-        if d.startswith("2026") or "stammdaten" in d.lower():
+    # Zuerst in der definierten Liste suchen
+    for d in STAMMDATEN_DATEIEN:
+        if os.path.exists(d):
             if d.endswith(".xlsx"):
                 try:
                     return pd.read_excel(d), d
                 except Exception as e:
                     print(f"Fehler beim Laden der Excel {d}: {e}")
             elif d.endswith(".csv"):
+                for sep in [";", ","]:
+                    try:
+                        return pd.read_csv(d, sep=sep, encoding="utf-8"), d
+                    except:
+                        try:
+                            return pd.read_csv(d, sep=sep, encoding="latin-1"), d
+                        except:
+                            pass
+                            
+    # Falls nicht in der Liste, das Verzeichnis scannen
+    dateien = os.listdir(".")
+    for d in dateien:
+        if d.startswith("2026") or "stammdaten" in d.lower():
+            if d.endswith(".xlsx") and d not in STAMMDATEN_DATEIEN:
+                try:
+                    return pd.read_excel(d), d
+                except Exception as e:
+                    print(f"Fehler beim Laden der Excel {d}: {e}")
+            elif d.endswith(".csv") and d not in STAMMDATEN_DATEIEN:
                 for sep in [";", ","]:
                     try:
                         return pd.read_csv(d, sep=sep, encoding="utf-8"), d
@@ -190,51 +210,45 @@ df_stamm, gefundener_dateiname = lade_stammdaten()
 
 if df_stamm is not None:
     st.markdown("🔐 **Eintrag aus Vereinsdatenbank laden (Sichere Suche)**")
-    st.info("Geben Sie Stammbuch-Nummer UND Nachname des Besitzers ein, um Ihre Daten automatisch zu laden.")
+    st.info("Geben Sie Stammbuch-Nummer UND Nachname des Besitzers ein und klicken Sie auf 'Daten suchen'.")
     
     col_search_nr, col_search_name = st.columns(2)
     with col_search_nr:
         suche_zuchtbuch = st.text_input("Stammbuch-Nummer:", placeholder="z.B. 111951")
     with col_search_name:
-        suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Stoop")
+        suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Ammann")
         
-    # Suche anstoßen, sobald beide Felder ausgefüllt sind
-    if suche_zuchtbuch and suche_nachname:
-        such_ziffern = extrahiere_ziffern(suche_zuchtbuch)
-        clean_nachname = str(suche_nachname).strip().lower()
-        
-        # Finde die Spalten heraus
-        such_spalte_nr = 'Stammbuch-Nummer' if 'Stammbuch-Nummer' in df_stamm.columns else ('Zuchtbuch_Nr' if 'Zuchtbuch_Nr' in df_stamm.columns else None)
-        such_spalte_name = 'Besitzer Nachname' if 'Besitzer Nachname' in df_stamm.columns else None
-        
-        if such_spalte_nr and such_spalte_name:
-            # Bereinige Nummern im Hintergrund
-            df_stamm['Ziffern_Suche'] = df_stamm[such_spalte_nr].apply(extrahiere_ziffern)
+    if st.button("🔍 Daten suchen"):
+        if suche_zuchtbuch and suche_nachname:
+            such_ziffern = extrahiere_ziffern(suche_zuchtbuch)
+            clean_nachname = str(suche_nachname).strip().lower()
             
-            # Suche nach exakter Übereinstimmung von Nummer UND Nachname (Case-Insensitive)
-            match = df_stamm[
-                (df_stamm['Ziffern_Suche'] == such_ziffern) & 
-                (df_stamm[such_spalte_name].astype(str).str.strip().str.lower() == clean_nachname)
-            ]
+            such_spalte_nr = 'Stammbuch-Nummer' if 'Stammbuch-Nummer' in df_stamm.columns else ('Zuchtbuch_Nr' if 'Zuchtbuch_Nr' in df_stamm.columns else None)
+            such_spalte_name = 'Besitzer Nachname' if 'Besitzer Nachname' in df_stamm.columns else None
             
-            if not match.empty:
-                row = match.iloc[0]
-                neue_nr = bereinige_nummer_string(row.get(such_spalte_nr, ''))
+            if such_spalte_nr and such_spalte_name:
+                df_stamm['Ziffern_Suche'] = df_stamm[such_spalte_nr].apply(extrahiere_ziffern)
                 
-                # Prüfen, ob sich der Eintrag geändert hat
-                if st.session_state.k_zuchtbuch != neue_nr:
-                    st.session_state.k_name = row.get('Name', '')
+                match = df_stamm[
+                    (df_stamm['Ziffern_Suche'] == such_ziffern) & 
+                    (df_stamm[such_spalte_name].astype(str).str.strip().str.lower() == clean_nachname)
+                ]
+                
+                if not match.empty:
+                    row = match.iloc[0]
+                    neue_nr = safe_str(row.get(such_spalte_nr, ''))
                     
-                    rasse = str(row.get('Rasse', '')).strip()
-                    farbe = str(row.get('Farbe', '')).strip()
+                    st.session_state.k_name = safe_str(row.get('Name', ''))
+                    
+                    rasse = safe_str(row.get('Rasse', ''))
+                    farbe = safe_str(row.get('Farbe', ''))
                     st.session_state.k_ems = f"{rasse} {farbe}".strip() if rasse and farbe else rasse
                     
-                    st.session_state.k_gruppe = str(row.get('Farbgruppe', '')) if pd.notna(row.get('Farbgruppe', '')) else ""
+                    st.session_state.k_gruppe = safe_str(row.get('Farbgruppe', ''))
                     st.session_state.k_rasse = rasse
                     st.session_state.k_zuchtbuch = neue_nr
-                    st.session_state.k_chip = str(row.get('Chip-Nummer', '')) if pd.notna(row.get('Chip-Nummer', '')) else ""
+                    st.session_state.k_chip = safe_str(row.get('Chip-Nummer', ''))
                     
-                    # Geburtsdatum konvertieren
                     geb_datum = row.get('Geburtsdatum', '')
                     if pd.notna(geb_datum):
                         try:
@@ -247,47 +261,44 @@ if df_stamm is not None:
                                 st.session_state.k_geboren = pd.to_datetime(geb_datum).date()
                             except: pass
                     
-                    # Geschlecht bestimmen
                     geschlecht_raw = str(row.get('Geschlecht', '')).lower().strip()
                     if "w" in geschlecht_raw or "f" in geschlecht_raw or "0.1" in geschlecht_raw:
                         st.session_state.k_geschlecht = "0.1 Weiblich"
                     else:
                         st.session_state.k_geschlecht = "1.0 Männlich"
                         
-                    # Kastrations-Status
                     kastriert_raw = str(row.get('Kastriert', '')).lower().strip()
                     if kastriert_raw in ["x", "ja", "yes", "1", "true", "kastrat", "k"]:
                         st.session_state.k_kastriert = "Ja"
                     else:
                         st.session_state.k_kastriert = "Nein"
                         
-                    # --- AUSSTELLER-DATEN BEFÜLLEN ---
-                    st.session_state.a_nachname = row.get('Besitzer Nachname', '')
-                    st.session_state.a_vorname = row.get('Besitzer Vorname', '')
-                    st.session_state.a_strasse = row.get('Besitzer Adresse 1', '')
+                    st.session_state.a_nachname = safe_str(row.get('Besitzer Nachname', ''))
+                    st.session_state.a_vorname = safe_str(row.get('Besitzer Vorname', ''))
+                    st.session_state.a_strasse = safe_str(row.get('Besitzer Adresse 1', ''))
                     
-                    plz = str(row.get('Besitzer PLZ', '')).replace(".0", "").strip() if pd.notna(row.get('Besitzer PLZ', '')) else ""
-                    ort = str(row.get('Besitzer Ort', '')).strip() if pd.notna(row.get('Besitzer Ort', '')) else ""
+                    plz = safe_str(row.get('Besitzer PLZ', ''))
+                    ort = safe_str(row.get('Besitzer Ort', ''))
                     st.session_state.a_plz_ort = f"{plz} {ort}".strip()
-                    st.session_state.a_land = row.get('Besitzer Land', 'Schweiz')
+                    st.session_state.a_land = safe_str(row.get('Besitzer Land', 'Schweiz'))
                     
-                    # Eltern-Spalten (falls vorhanden)
-                    st.session_state.v_name = row.get('Vater_Name', '') if pd.notna(row.get('Vater_Name')) else ""
-                    st.session_state.v_ems = row.get('Vater_EMS', '') if pd.notna(row.get('Vater_EMS')) else ""
-                    st.session_state.v_zuchtbuch = row.get('Vater_Zuchtbuch', '') if pd.notna(row.get('Vater_Zuchtbuch')) else ""
-                    st.session_state.m_name = row.get('Mutter_Name', '') if pd.notna(row.get('Mutter_Name')) else ""
-                    st.session_state.m_ems = row.get('Mutter_EMS', '') if pd.notna(row.get('Mutter_EMS')) else ""
-                    st.session_state.m_zuchtbuch = row.get('Mutter_Zuchtbuch', '') if pd.notna(row.get('Mutter_Zuchtbuch')) else ""
+                    st.session_state.v_name = safe_str(row.get('Vater_Name', ''))
+                    st.session_state.v_ems = safe_str(row.get('Vater_EMS', ''))
+                    st.session_state.v_zuchtbuch = safe_str(row.get('Vater_Zuchtbuch', ''))
+                    st.session_state.m_name = safe_str(row.get('Mutter_Name', ''))
+                    st.session_state.m_ems = safe_str(row.get('Mutter_EMS', ''))
+                    st.session_state.m_zuchtbuch = safe_str(row.get('Mutter_Zuchtbuch', ''))
                     
                     st.success(f"✅ Daten für '{st.session_state.k_name}' erfolgreich geladen!")
                     st.rerun()
+                else:
+                    st.warning("Keine Übereinstimmung für diese Stammbuch-Nummer und diesen Nachnamen gefunden.")
             else:
-                # Wichtig für den Datenschutz: Keine Bestätigung, welches Feld falsch war!
-                st.warning("Keine Übereinstimmung für diese Stammbuch-Nummer und diesen Nachnamen gefunden.")
+                st.error("Fehler bei den Spaltennamen der geladenen Datei!")
         else:
-            st.error("Fehler bei den Spaltennamen der Datenbank!")
+            st.error("Bitte füllen Sie beide Suchfelder aus!")
 else:
-    st.info("Hinweis: Laden Sie Ihre '2026.xlsx' oder '2026.csv' hoch, um das automatische Ausfüllen freizuschalten.")
+    st.info("Hinweis: Laden Sie Ihre '2026.xlsx - Sheet1.csv' oder '2026.xlsx' auf GitHub hoch, um die automatische Ausfüll-Funktion freizuschalten.")
 
 # --- Eingabefelder für die Katze ---
 col3, col4 = st.columns([2, 1])
@@ -312,9 +323,12 @@ with col11:
     kast_index = 0 if st.session_state.k_kastriert == "Ja" else 1
     katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"], index=kast_index)
 
-# Dynamische Klassenfilterung
+# Dynamische Klassenfilterung mit "-" als standardmäßigen Platzhalter
 gemeinsame_klassen = ["11. Klasse 8-12 Monate", "12. Klasse 4-8 Monate", "13a. Novizenklasse", "13b. Kontrollklasse", "13c. Bestimmungsklasse", "14. Hauskatze", "15. Ausser Konkurrenz"]
-klassen_optionen = ["2. Supreme Premior - PH", "4. Gr. Int. Premior - CAPS", "6. International Premior - CAGPIB", "8. Premior - CAPIB", "10. Kastraten (Neuter) - CAP"] + gemeinsame_klassen if katze_kastriert == "Ja" else ["1. Supreme Champion - PH", "3. Gr. Int. Champion - CACS", "5. International Champion - CAGCIB", "7. Champion - CACIB", "9. Offene Klasse (Open) - CAC"] + gemeinsame_klassen
+if katze_kastriert == "Ja":
+    klassen_optionen = ["-", "2. Supreme Premior - PH", "4. Gr. Int. Premior - CAPS", "6. International Premior - CAGPIB", "8. Premior - CAPIB", "10. Kastraten (Neuter) - CAP"] + gemeinsame_klassen
+else:
+    klassen_optionen = ["-", "1. Supreme Champion - PH", "3. Gr. Int. Champion - CACS", "5. International Champion - CAGCIB", "7. Champion - CACIB", "9. Offene Klasse (Open) - CAC"] + gemeinsame_klassen
 
 ausstellungsklasse = st.selectbox("Klasse für die gemeldet wird *", klassen_optionen)
 katze_gewicht = st.text_input("Gewicht der Katze (kg)", placeholder="z.B. 4.5")
@@ -385,6 +399,9 @@ agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akz
 if st.button("Anmeldung verbindlich absenden", type="primary"):
     if not (ausstellungsort and katze_name and aussteller_nachname and aussteller_email and agb_akzeptiert):
         st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
+    elif ausstellungsklasse == "-":
+        # Blockiert das Absenden, wenn die Klasse nicht gewählt wurde
+        st.error("Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!")
     elif not (samstag_aktiv or sonntag_aktiv):
         st.error("Bitte wählen Sie mindestens einen Ausstellungstag aus.")
     else:
@@ -427,3 +444,4 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
 
+```
