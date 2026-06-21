@@ -12,6 +12,9 @@ import pandas as pd
 import os
 import requests
 import urllib.parse
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
 from datetime import datetime, date
 
 # Dateiname für die Excel-Datenbank
@@ -28,21 +31,18 @@ if 'plz_ort' not in st.session_state:
 if 'land' not in st.session_state:
     st.session_state.land = "Schweiz"
 
-# Optimierte Hilfsfunktion für die Adresssuche (Simuliert einen Browser & bereinigt die Eingabe)
+# Optimierte Hilfsfunktion für die Adresssuche
 def suche_adresse(query):
     if not query or len(query) < 4:
         return []
     try:
-        # Kommas entfernen und Mehrfachleerzeichen bereinigen
         clean_query = query.replace(",", " ").strip()
         while "  " in clean_query:
             clean_query = clean_query.replace("  ", " ")
             
-        # URL-Encoding durchführen
         encoded_query = urllib.parse.quote(clean_query)
         url = f"https://photon.komoot.io/api/?q={encoded_query}&limit=5&lang=de"
         
-        # User-Agent mitsenden, damit die API die Anfrage nicht als Bot blockiert (Sehr wichtig!)
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         }
@@ -76,9 +76,111 @@ def suche_adresse(query):
                     })
             return suggestions
     except Exception as e:
-        # Fehler im Streamlit-Protokoll sichtbar machen für Debugging
         print(f"Fehler bei Adresssuche: {e}")
     return []
+
+# --- HILFSFUNKTION FÜR DEN E-MAIL-VERSAND ---
+def sende_bestaetigungs_email(daten):
+    # Versuche die SMTP-Daten aus den Streamlit Secrets zu laden
+    try:
+        smtp_server = st.secrets["smtp"]["server"]
+        smtp_port = int(st.secrets["smtp"]["port"])
+        smtp_user = st.secrets["smtp"]["user"]
+        smtp_password = st.secrets["smtp"]["password"]
+        sender_email = st.secrets["smtp"]["sender"]
+    except Exception:
+        # Falls keine Secrets hinterlegt sind, wird eine Warnung ausgegeben, aber kein Absturz verursacht
+        st.warning("⚠️ E-Mail-Bestätigung konnte nicht gesendet werden, da die SMTP-Secrets im Dashboard noch nicht konfiguriert wurden. Die Anmeldung wurde trotzdem in der Excel gespeichert!")
+        return False
+
+    # Empfänger & Kopie (BCC oder CC) an den Verein
+    empfaenger = daten["Email"]
+    kopie_verein = sender_email
+
+    betreff = f"Anmeldebestätigung: Katzenausstellung {daten['Ausstellungsort']} - {daten['Katze_Name']}"
+    
+    # E-Mail Text sauber formatieren
+    inhalt = f"""Guten Tag {daten['Aussteller_Vorname']} {daten['Aussteller_Nachname']}
+
+Vielen Dank für Ihre Anmeldung zur Katzenausstellung in {daten['Ausstellungsort']}. 
+Hiermit bestätigen wir den Erhalt Ihrer Daten. Eine Kopie dieser Nachricht ging an das Ausstellungskomitee.
+
+Hier sind die von Ihnen übermittelten Angaben:
+
+=========================================
+1. AUSSTELLUNGSDETAILS
+=========================================
+Ausstellungsort: {daten['Ausstellungsort']}
+Angemeldete Tage: {daten['Angemeldete_Tage']}
+
+=========================================
+2. ANGABEN ZUR KATZE
+=========================================
+Titel & Name: {daten['Katze_Name']}
+EMS-Code: {daten['Katze_EMS']}
+Rasse & Farbe: {daten['Rasse_Farbe']}
+Gruppe: {daten['Gruppe']}
+Klasse: {daten['Angemeldete_Klasse']}
+Geschlecht: {daten['Geschlecht']}
+Kastriert: {daten['Kastrat']}
+Geburtsdatum: {daten['Geburtsdatum']}
+Gewicht: {daten['Gewicht']} kg
+Zuchtbuch-Nr: {daten['Zuchtbuch_Nr']}
+Chip-Nr: {daten['Chip_Nr']}
+
+=========================================
+3. STAMMBAUM (ELTERN)
+=========================================
+Vater: {daten['Vater_Name']} (EMS: {daten['Vater_EMS']}, Nr: {daten['Vater_Zuchtbuch']})
+Mutter: {daten['Mutter_Name']} (EMS: {daten['Mutter_EMS']}, Nr: {daten['Mutter_Zuchtbuch']})
+
+=========================================
+4. AUSSTELLER & ZÜCHTER
+=========================================
+Aussteller: {daten['Aussteller_Vorname']} {daten['Aussteller_Nachname']}
+Adresse: {daten['Strasse']}, {daten['PLZ_Ort']}, {daten['Land']}
+Telefon: {daten['Telefon']}
+E-Mail: {daten['Email']}
+Verein: {daten['Verein']} (Mitglieds-Nr: {daten['MitgliedsNr']})
+Züchter: {daten['Zuechter']}
+
+=========================================
+5. LOGISTIK & BEMERKUNGEN
+=========================================
+Doppelkäfig mit: {daten['Doppelkafig']}
+Bemerkungen: {daten['Bemerkungen']}
+
+Wir wünschen Ihnen und Ihren Katzen (vielleicht sogar prächtigen Norwegischen Waldkatzen? 🐾) eine erfolgreiche Vorbereitung und viel Erfolg auf der Ausstellung!
+
+Freundliche Grüsse
+Ihr Ausstellungsteam
+"""
+
+    try:
+        msg = MIMEText(inhalt, 'plain', 'utf-8')
+        msg['Subject'] = Header(betreff, 'utf-8')
+        msg['From'] = sender_email
+        msg['To'] = empfaenger
+        msg['Cc'] = kopie_verein
+
+        # Verbindung zum Mailserver aufbauen
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        else:
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls() # Verschlüsselung aktivieren
+            
+        server.login(smtp_user, smtp_password)
+        
+        # E-Mail an Aussteller und in Kopie an den Verein senden
+        empfaenger_liste = [empfaenger, kopie_verein]
+        server.sendmail(sender_email, empfaenger_liste, msg.as_string())
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"Fehler beim Senden der Bestätigungs-E-Mail: {e}")
+        return False
+
 
 st.title("🐾 Anmeldung zur Katzenausstellung")
 st.markdown("### Fédération Féline Helvétique (FFH) / FIFe")
@@ -87,13 +189,11 @@ st.write("Bitte füllen Sie das Formular vollständig aus.")
 # --- 1. AUSSTELLUNGSDETAILS ---
 st.subheader("1. Ausstellungsdetails")
 
-# Ausstellungsort über die volle Breite
 ausstellungsort = st.text_input("Ausstellung in *", placeholder="z.B. Bern")
 
-# Zeile für Samstag mit Checkbox und Datum direkt dahinter
 col_sat_chk, col_sat_date = st.columns([1, 2])
 with col_sat_chk:
-    st.write("") # Optische Ausrichtung
+    st.write("") 
     st.write("") 
     samstag_aktiv = st.checkbox("Samstag", value=True)
 with col_sat_date:
@@ -104,10 +204,9 @@ with col_sat_date:
         disabled=not samstag_aktiv
     )
 
-# Zeile für Sonntag mit Checkbox und Datum direkt dahinter
 col_sun_chk, col_sun_date = st.columns([1, 2])
 with col_sun_chk:
-    st.write("") # Optische Ausrichtung
+    st.write("") 
     st.write("")
     sonntag_aktiv = st.checkbox("Sonntag", value=False)
 with col_sun_date:
@@ -118,7 +217,6 @@ with col_sun_date:
         disabled=not sonntag_aktiv
     )
 
-# Werte für den Excel-Export aufbereiten
 gewaehlte_tage = []
 if samstag_aktiv:
     gewaehlte_tage.append(f"Samstag ({datum_samstag.strftime('%d.%m.%Y')})")
@@ -158,7 +256,6 @@ with col9:
 with col10:
     katze_geschlecht = st.radio("Geschlecht *", ["1.0 Männlich", "0.1 Weiblich"])
 with col11:
-    # Standardwert ist "Nein" (Index 1)
     katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"], index=1)
 
 # Dynamische Klassenfilterung
@@ -306,6 +403,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Bemerkungen": bemerkungen
         }
         
+        # In Excel speichern
         df_neu = pd.DataFrame([neue_anmeldung])
         
         if os.path.exists(EXCEL_FILE):
@@ -316,7 +414,57 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             
         df_gesamt.to_excel(EXCEL_FILE, index=False)
         
-        st.success("🎉 Vielen Dank! Die Anmeldung wurde erfolgreich gespeichert.")
+        # --- E-MAIL VERSAND ANSTOSSEN ---
+        mail_erfolgreich = sende_bestaetigungs_email(neue_anmeldung)
+        
+        if mail_erfolgreich:
+            st.success("🎉 Vielen Dank! Die Anmeldung wurde erfolgreich gespeichert und eine Bestätigungs-E-Mail wurde an Sie versendet.")
+        else:
+            st.success("🎉 Die Anmeldung wurde erfolgreich gespeichert. (E-Mail konnte nicht versendet werden)")
+            
         st.balloons()
 
 
+# --- 6. ADMIN-BEREICH (DOWNLOAD DER EXCEL-DATEI) ---
+st.markdown("---")
+with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
+    admin_passwort = st.text_input("Admin-Passwort eingeben", type="password")
+    
+    if admin_passwort == "ffh2026":
+        if os.path.exists(EXCEL_FILE):
+            with open(EXCEL_FILE, "rb") as f:
+                excel_data = f.read()
+                
+            st.success("Passwort korrekt! Sie können die Datei jetzt herunterladen.")
+            
+            st.download_button(
+                label="📥 Excel-Tabelle herunterladen (.xlsx)",
+                data=excel_data,
+                file_name="ausstellung_anmeldungen.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_excel_btn"
+            )
+            
+            st.markdown("### 📊 Vorschau der registrierten Anmeldungen:")
+            df_preview = pd.read_excel(EXCEL_FILE)
+            st.dataframe(df_preview)
+        else:
+            st.info("Es liegen momentan noch keine Anmeldungen in der Datenbank vor.")
+    elif admin_passwort:
+        st.error("Ungültiges Admin-Passwort!")
+
+```
+eof
+### WICHTIG: E-Mail-Zugangsdaten in Streamlit Cloud hinterlegen
+Damit die E-Mail-Funktion läuft, müssen Sie die Zugangsdaten für das Postfach des Vereins in Ihrem Streamlit Cloud Dashboard hinterlegen.
+ 1. Loggen Sie sich bei **share.streamlit.io** ein.
+ 2. Suchen Sie Ihre App in der Liste und klicken Sie rechts auf die drei Punkte ... und wählen Sie **Settings**.
+ 3. Gehen Sie links auf das Menü **Secrets**.
+ 4. Kopieren Sie die folgenden Zeilen hinein, passen Sie die Daten an das E-Mail-Konto Ihres Vereins an (z.B. von Hostpoint, Bluewin, Gmail, etc.) und klicken Sie auf **Save**:
+```toml
+[smtp]
+server = "mail.gmx.net"      # Ihr SMTP-Server (z.B. mail.gmx.net, smtp.gmail.com, etc.)
+port = 587                  # Meistens 587 (STARTTLS) oder 465 (SSL)
+user = "ausstellung@ihr-verein.ch"  # Der Benutzername (E-Mail-Adresse) Ihres Postfachs
+password = "IhrSicheresE-MailPasswort" # Das Passwort dieses E-Mail-Postfachs
+sender = "ausstellung@ihr-verein.ch"    # Die Absender-E-Mail (meist identisch mit user)
