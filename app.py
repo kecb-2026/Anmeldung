@@ -7,6 +7,15 @@ Alle Rechte vorbehalten
 """
 
 
+# -*- coding: utf-8 -*-
+
+"""
+Projekt: Cat Show Anmeldung des KECB Katzenausstellung
+Copyright (c) 2026 Brigitte Portner
+Alle Rechte vorbehalten
+"""
+
+
 import streamlit as st
 import pandas as pd
 import os
@@ -452,5 +461,4 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
             st.info("Es liegen momentan noch keine Anmeldungen in der Datenbank vor.")
     elif admin_passwort:
         st.error("Ungültiges Admin-Passwort!")
-
 
