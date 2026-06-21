@@ -6,7 +6,7 @@ Copyright (c) 2026 Brigitte Portner
 Alle Rechte vorbehalten
 """
 
-```python
+
 import streamlit as st
 import pandas as pd
 import os
@@ -427,4 +427,3 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
 
-```
