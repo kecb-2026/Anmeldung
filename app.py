@@ -6,6 +6,7 @@ Copyright (c) 2026 Brigitte Portner
 Alle Rechte vorbehalten
 """
 
+```python
 import streamlit as st
 import pandas as pd
 import os
@@ -16,10 +17,10 @@ from email.mime.text import MIMEText
 from email.header import Header
 from datetime import datetime, date
 
-# Dateinamen für die Excel-Dateien
+# Dateiname für das Speichern der Anmeldungen
 EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
 
-# Unterstützt sowohl den Standardnamen als auch deinen Original-Dateinamen
+# Unterstützt sowohl den Standardnamen als auch Ihren Original-Dateinamen
 STAMMDATEN_DATEIEN = ["2026.xlsx", "katzen_stammdaten.xlsx"]
 
 # Seite konfigurieren
@@ -43,7 +44,7 @@ session_defaults = {
     'k_geboren': date(2025, 1, 1),
     'k_geschlecht': "1.0 Männlich",
     'k_kastriert': "Nein",
-    # Eltern (falls in Excel vorhanden, sonst leer für manuelle Eingabe)
+    # Eltern
     'v_name': "", 'v_ems': "", 'v_zuchtbuch': "",
     'm_name': "", 'm_ems': "", 'm_zuchtbuch': ""
 }
@@ -52,13 +53,48 @@ for key, val in session_defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-# Hilfsfunktion: Nur Ziffern extrahieren (für die extrem robuste Nummernsuche)
+# Hilfsfunktion: Float-Bereinigung für Nummern
+def bereinige_nummer_string(wert):
+    if pd.isna(wert):
+        return ""
+    text = str(wert).strip()
+    if text.endswith(".0"):
+        text = text[:-2]
+    return text
+
+# Extrem robuste Hilfsfunktion zum Extrahieren von reinen Ziffern
 def extrahiere_ziffern(wert):
     if pd.isna(wert):
         return ""
-    return "".join(filter(str.isdigit, str(wert)))
+    text = str(wert).strip()
+    if text.endswith(".0"):
+        text = text[:-2]
+    elif "." in text:
+        text = text.split(".")[0]
+    return "".join(filter(str.isdigit, text))
 
-# Hilfsfunktion: Adresssuche (Photon / OpenStreetMap)
+# Automatischer Stammdaten-Lader (unterstützt Excel und CSV flexibel)
+def lade_stammdaten():
+    dateien = os.listdir(".")
+    for d in dateien:
+        if d.startswith("2026") or "stammdaten" in d.lower():
+            if d.endswith(".xlsx"):
+                try:
+                    return pd.read_excel(d), d
+                except Exception as e:
+                    print(f"Fehler beim Laden der Excel {d}: {e}")
+            elif d.endswith(".csv"):
+                for sep in [";", ","]:
+                    try:
+                        return pd.read_csv(d, sep=sep, encoding="utf-8"), d
+                    except:
+                        try:
+                            return pd.read_csv(d, sep=sep, encoding="latin-1"), d
+                        except:
+                            pass
+    return None, None
+
+# Hilfsfunktion: Adresssuche
 def suche_adresse(query):
     if not query or len(query) < 4: return []
     try:
@@ -101,7 +137,7 @@ def sende_bestaetigungs_email(daten):
     kopie_verein = sender_email
     betreff = f"Anmeldebestätigung: {daten['Ausstellungsort']} - {daten['Katze_Name']}"
     
-    inhalt = f"Guten Tag {daten['Aussteller_Vorname']} {daten['Aussteller_Nachname']}\n\nVielen Dank für Ihre Anmeldung. Hier sind Ihre Daten:\n\nKatze: {daten['Katze_Name']} ({daten['Katze_EMS']})\nKlasse: {daten['Angemeldete_Klasse']}\nZuchtbuch-Nr: {daten['Zuchtbuch_Nr']}\n\nFreundliche Grüsse\nIhr Ausstellungsteam"
+    inhalt = f"Guten Tag {daten['Aussteller_Vorname']} {daten['Aussteller_Nachname']}\n\nVielen Dank für Ihre Anmeldung. Hier sind Ihre Daten:\n\nKatze: {daten['Katze_Name']} ({daten['Katze_EMS']})\nKlasse: {daten['Angemeltete_Klasse']}\nZuchtbuch-Nr: {daten['Zuchtbuch_Nr']}\n\nFreundliche Grüsse\nIhr Ausstellungsteam"
 
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
@@ -147,105 +183,111 @@ if sonntag_aktiv: gewaehlte_tage.append(f"Sonntag ({datum_sonntag.strftime('%d.%
 wochentag_export = ", ".join(gewaehlte_tage)
 
 
-# --- 2. AUTOMATISCHER KATZEN- & AUSSTELLER-SUCHFILTER (EXCEL) ---
+# --- 2. AUTOMATISCHER KATZEN- & AUSSTELLER-SUCHFILTER ---
 st.subheader("2. Angaben zur Katze")
 
-# Finde heraus, welche Stammdaten-Excel existiert
-aktive_stammdaten_datei = None
-for dateiname in STAMMDATEN_DATEIEN:
-    if os.path.exists(dateiname):
-        aktive_stammdaten_datei = dateiname
-        break
+df_stamm, gefundener_dateiname = lade_stammdaten()
 
-if aktive_stammdaten_datei:
-    st.markdown("🔍 **Daten vollautomatisch aus Vereinsdatenbank laden**")
-    suche_zuchtbuch = st.text_input("Geben Sie die Stammbuch-Nummer ein (Ziffern reichen aus):", placeholder="z.B. 109473")
+if df_stamm is not None:
+    st.markdown("🔐 **Eintrag aus Vereinsdatenbank laden (Sichere Suche)**")
+    st.info("Geben Sie Stammbuch-Nummer UND Nachname des Besitzers ein, um Ihre Daten automatisch zu laden.")
     
-    if suche_zuchtbuch:
-        such_ziffern = extrahiere_ziffern(suche_zuchtbuch)
+    col_search_nr, col_search_name = st.columns(2)
+    with col_search_nr:
+        suche_zuchtbuch = st.text_input("Stammbuch-Nummer:", placeholder="z.B. 111951")
+    with col_search_name:
+        suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Stoop")
         
-        if not such_ziffern:
-            st.warning("Bitte geben Sie eine Nummer ein, die mindestens eine Ziffer enthält.")
-        else:
-            try:
-                df_stamm = pd.read_excel(aktive_stammdaten_datei)
+    # Suche anstoßen, sobald beide Felder ausgefüllt sind
+    if suche_zuchtbuch and suche_nachname:
+        such_ziffern = extrahiere_ziffern(suche_zuchtbuch)
+        clean_nachname = str(suche_nachname).strip().lower()
+        
+        # Finde die Spalten heraus
+        such_spalte_nr = 'Stammbuch-Nummer' if 'Stammbuch-Nummer' in df_stamm.columns else ('Zuchtbuch_Nr' if 'Zuchtbuch_Nr' in df_stamm.columns else None)
+        such_spalte_name = 'Besitzer Nachname' if 'Besitzer Nachname' in df_stamm.columns else None
+        
+        if such_spalte_nr and such_spalte_name:
+            # Bereinige Nummern im Hintergrund
+            df_stamm['Ziffern_Suche'] = df_stamm[such_spalte_nr].apply(extrahiere_ziffern)
+            
+            # Suche nach exakter Übereinstimmung von Nummer UND Nachname (Case-Insensitive)
+            match = df_stamm[
+                (df_stamm['Ziffern_Suche'] == such_ziffern) & 
+                (df_stamm[such_spalte_name].astype(str).str.strip().str.lower() == clean_nachname)
+            ]
+            
+            if not match.empty:
+                row = match.iloc[0]
+                neue_nr = bereinige_nummer_string(row.get(such_spalte_nr, ''))
                 
-                # Deine spezifische Spalte heißt laut CSV: "Stammbuch-Nummer"
-                such_spalte = 'Stammbuch-Nummer' if 'Stammbuch-Nummer' in df_stamm.columns else 'Zuchtbuch_Nr'
-                
-                if such_spalte in df_stamm.columns:
-                    # Ziffern-Suche vorbereiten
-                    df_stamm['Ziffern_Suche'] = df_stamm[such_spalte].apply(extrahiere_ziffern)
-                    match = df_stamm[df_stamm['Ziffern_Suche'] == such_ziffern]
+                # Prüfen, ob sich der Eintrag geändert hat
+                if st.session_state.k_zuchtbuch != neue_nr:
+                    st.session_state.k_name = row.get('Name', '')
                     
-                    if not match.empty:
-                        row = match.iloc[0]
-                        
-                        # --- KATZEN-DATEN AUS DEINER EXCEL BEFÜLLEN ---
-                        st.session_state.k_name = row.get('Name', '')
-                        
-                        # EMS-Code dynamisch aus Rasse + Farbe zusammensetzen (z.B. "EXO" + "e 03" = "EXO e 03")
-                        rasse = str(row.get('Rasse', '')).strip()
-                        farbe = str(row.get('Farbe', '')).strip()
-                        st.session_state.k_ems = f"{rasse} {farbe}".strip() if rasse and farbe else rasse
-                        
-                        st.session_state.k_gruppe = str(row.get('Farbgruppe', '')) if pd.notna(row.get('Farbgruppe', '')) else ""
-                        st.session_state.k_rasse = rasse
-                        st.session_state.k_zuchtbuch = row.get(such_spalte, '')
-                        st.session_state.k_chip = str(row.get('Chip-Nummer', '')) if pd.notna(row.get('Chip-Nummer', '')) else ""
-                        
-                        # Geburtsdatum konvertieren (Umgang mit deutschem Format)
-                        geb_datum = row.get('Geburtsdatum', '')
-                        if pd.notna(geb_datum):
+                    rasse = str(row.get('Rasse', '')).strip()
+                    farbe = str(row.get('Farbe', '')).strip()
+                    st.session_state.k_ems = f"{rasse} {farbe}".strip() if rasse and farbe else rasse
+                    
+                    st.session_state.k_gruppe = str(row.get('Farbgruppe', '')) if pd.notna(row.get('Farbgruppe', '')) else ""
+                    st.session_state.k_rasse = rasse
+                    st.session_state.k_zuchtbuch = neue_nr
+                    st.session_state.k_chip = str(row.get('Chip-Nummer', '')) if pd.notna(row.get('Chip-Nummer', '')) else ""
+                    
+                    # Geburtsdatum konvertieren
+                    geb_datum = row.get('Geburtsdatum', '')
+                    if pd.notna(geb_datum):
+                        try:
+                            if isinstance(geb_datum, str):
+                                st.session_state.k_geboren = datetime.strptime(geb_datum.strip(), "%d.%m.%Y").date()
+                            else:
+                                st.session_state.k_geboren = pd.to_datetime(geb_datum).date()
+                        except:
                             try:
-                                if isinstance(geb_datum, str):
-                                    st.session_state.k_geboren = datetime.strptime(geb_datum.strip(), "%d.%m.%Y").date()
-                                else:
-                                    st.session_state.k_geboren = pd.to_datetime(geb_datum).date()
+                                st.session_state.k_geboren = pd.to_datetime(geb_datum).date()
                             except: pass
-                        
-                        # Geschlecht bestimmen (m -> Männlich, w -> Weiblich)
-                        geschlecht_raw = str(row.get('Geschlecht', '')).lower().strip()
-                        if "w" in geschlecht_raw or "f" in geschlecht_raw or "0.1" in geschlecht_raw:
-                            st.session_state.k_geschlecht = "0.1 Weiblich"
-                        else:
-                            st.session_state.k_geschlecht = "1.0 Männlich"
-                            
-                        # Kastrations-Status bestimmen
-                        kastriert_raw = str(row.get('Kastriert', '')).lower().strip()
-                        if kastriert_raw in ["x", "ja", "yes", "1", "true", "kastrat", "k"]:
-                            st.session_state.k_kastriert = "Ja"
-                        else:
-                            st.session_state.k_kastriert = "Nein"
-                            
-                        # --- AUSSTELLER-DATEN AUS DEINER EXCEL BEFÜLLEN ---
-                        st.session_state.a_nachname = row.get('Besitzer Nachname', '')
-                        st.session_state.a_vorname = row.get('Besitzer Vorname', '')
-                        st.session_state.a_strasse = row.get('Besitzer Adresse 1', '')
-                        
-                        plz = str(row.get('Besitzer PLZ', '')).replace(".0", "").strip() if pd.notna(row.get('Besitzer PLZ', '')) else ""
-                        ort = str(row.get('Besitzer Ort', '')).strip() if pd.notna(row.get('Besitzer Ort', '')) else ""
-                        st.session_state.a_plz_ort = f"{plz} {ort}".strip()
-                        
-                        st.session_state.a_land = row.get('Besitzer Land', 'Schweiz')
-                        
-                        # Eltern-Spalten (falls vorhanden)
-                        st.session_state.v_name = row.get('Vater_Name', '')
-                        st.session_state.v_ems = row.get('Vater_EMS', '')
-                        st.session_state.v_zuchtbuch = row.get('Vater_Zuchtbuch', '')
-                        st.session_state.m_name = row.get('Mutter_Name', '')
-                        st.session_state.m_ems = row.get('Mutter_EMS', '')
-                        st.session_state.m_zuchtbuch = row.get('Mutter_Zuchtbuch', '')
-                        
-                        st.success(f"✅ Daten für Katze '{st.session_state.k_name}' und Aussteller '{st.session_state.a_vorname} {st.session_state.a_nachname}' erfolgreich geladen!")
+                    
+                    # Geschlecht bestimmen
+                    geschlecht_raw = str(row.get('Geschlecht', '')).lower().strip()
+                    if "w" in geschlecht_raw or "f" in geschlecht_raw or "0.1" in geschlecht_raw:
+                        st.session_state.k_geschlecht = "0.1 Weiblich"
                     else:
-                        st.warning(f"Keine Katze mit den Ziffern '{such_ziffern}' gefunden. Bitte tragen Sie die Daten manuell ein.")
-                else:
-                    st.error("Fehler: Keine Spalte 'Stammbuch-Nummer' oder 'Zuchtbuch_Nr' in der Excel-Datei gefunden!")
-            except Exception as e:
-                st.error(f"Fehler beim Auslesen der Stammdaten-Excel: {e}")
+                        st.session_state.k_geschlecht = "1.0 Männlich"
+                        
+                    # Kastrations-Status
+                    kastriert_raw = str(row.get('Kastriert', '')).lower().strip()
+                    if kastriert_raw in ["x", "ja", "yes", "1", "true", "kastrat", "k"]:
+                        st.session_state.k_kastriert = "Ja"
+                    else:
+                        st.session_state.k_kastriert = "Nein"
+                        
+                    # --- AUSSTELLER-DATEN BEFÜLLEN ---
+                    st.session_state.a_nachname = row.get('Besitzer Nachname', '')
+                    st.session_state.a_vorname = row.get('Besitzer Vorname', '')
+                    st.session_state.a_strasse = row.get('Besitzer Adresse 1', '')
+                    
+                    plz = str(row.get('Besitzer PLZ', '')).replace(".0", "").strip() if pd.notna(row.get('Besitzer PLZ', '')) else ""
+                    ort = str(row.get('Besitzer Ort', '')).strip() if pd.notna(row.get('Besitzer Ort', '')) else ""
+                    st.session_state.a_plz_ort = f"{plz} {ort}".strip()
+                    st.session_state.a_land = row.get('Besitzer Land', 'Schweiz')
+                    
+                    # Eltern-Spalten (falls vorhanden)
+                    st.session_state.v_name = row.get('Vater_Name', '') if pd.notna(row.get('Vater_Name')) else ""
+                    st.session_state.v_ems = row.get('Vater_EMS', '') if pd.notna(row.get('Vater_EMS')) else ""
+                    st.session_state.v_zuchtbuch = row.get('Vater_Zuchtbuch', '') if pd.notna(row.get('Vater_Zuchtbuch')) else ""
+                    st.session_state.m_name = row.get('Mutter_Name', '') if pd.notna(row.get('Mutter_Name')) else ""
+                    st.session_state.m_ems = row.get('Mutter_EMS', '') if pd.notna(row.get('Mutter_EMS')) else ""
+                    st.session_state.m_zuchtbuch = row.get('Mutter_Zuchtbuch', '') if pd.notna(row.get('Mutter_Zuchtbuch')) else ""
+                    
+                    st.success(f"✅ Daten für '{st.session_state.k_name}' erfolgreich geladen!")
+                    st.rerun()
+            else:
+                # Wichtig für den Datenschutz: Keine Bestätigung, welches Feld falsch war!
+                st.warning("Keine Übereinstimmung für diese Stammbuch-Nummer und diesen Nachnamen gefunden.")
+        else:
+            st.error("Fehler bei den Spaltennamen der Datenbank!")
 else:
-    st.info("Hinweis: Laden Sie Ihre '2026.xlsx' auf GitHub hoch, um die automatische Ausfüll-Funktion für Katzen & Besitzer freizuschalten.")
+    st.info("Hinweis: Laden Sie Ihre '2026.xlsx' oder '2026.csv' hoch, um das automatische Ausfüllen freizuschalten.")
 
 # --- Eingabefelder für die Katze ---
 col3, col4 = st.columns([2, 1])
@@ -297,7 +339,6 @@ mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_
 # --- 4. AUSSTELLER & ZÜCHTER ---
 st.subheader("4. Aussteller & Züchter")
 
-# Nur anzeigen, wenn keine Adressdaten geladen wurden, um die Bedienung schlank zu halten
 if not st.session_state.a_strasse:
     st.markdown("🔍 **Schnell-Eingabe der Adresse**")
     suchanfrage = st.text_input("Suchen Sie nach Ihrer Strasse, PLZ oder Ort...", placeholder="z.B. Schulhausstrasse 22 Moosseedorf")
@@ -386,3 +427,4 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
 
+```
