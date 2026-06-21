@@ -335,18 +335,29 @@ bereits_erhalten = st.text_input("Bereits erhalten in / Point obtenu à l'exposi
 
 
 # --- 3. STAMMBAUM (ELTERN) ---
-st.subheader("3. Stammbaum (Eltern)")
-st.markdown("**Vater**")
-col_v1, col_v2, col_v3 = st.columns([2, 1, 1])
-vater_name = col_v1.text_input("Name des Vaters *", value=st.session_state.v_name)
-vater_ems = col_v2.text_input("EMS-Code Vater *", value=st.session_state.v_ems)
-vater_zuchtbuch = col_v3.text_input("Zuchtbuch-Nr. Vater *", value=st.session_state.v_zuchtbuch)
+# Bereich wird ausgeblendet, wenn bereits eine Zuchtbuch-Nr im Session State existiert
+if not st.session_state.k_zuchtbuch:
+    with st.container():
+        st.subheader("3. Stammbaum (Eltern)")
+        st.markdown("**Vater**")
+        col_v1, col_v2, col_v3 = st.columns([2, 1, 1])
+        vater_name = col_v1.text_input("Name des Vaters *", value=st.session_state.v_name)
+        vater_ems = col_v2.text_input("EMS-Code Vater *", value=st.session_state.v_ems)
+        vater_zuchtbuch = col_v3.text_input("Zuchtbuch-Nr. Vater *", value=st.session_state.v_zuchtbuch)
 
-st.markdown("**Mutter**")
-col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
-mutter_name = col_m1.text_input("Name der Mutter *", value=st.session_state.m_name)
-mutter_ems = col_m2.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
-mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
+        st.markdown("**Mutter**")
+        col_m1, col_m2, col_m3 = st.columns([2, 1, 1])
+        mutter_name = col_m1.text_input("Name der Mutter *", value=st.session_state.m_name)
+        mutter_ems = col_m2.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
+        mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
+else:
+    # Falls Daten geladen wurden, müssen die Variablen für den Absende-Prozess trotzdem existieren
+    vater_name = st.session_state.v_name
+    vater_ems = st.session_state.v_ems
+    vater_zuchtbuch = st.session_state.v_zuchtbuch
+    mutter_name = st.session_state.m_name
+    mutter_ems = st.session_state.m_ems
+    mutter_zuchtbuch = st.session_state.m_zuchtbuch
 
 
 # --- 4. AUSSTELLER & ZÜCHTER ---
@@ -442,4 +453,3 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
             st.dataframe(pd.read_excel(EXCEL_FILE))
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
-
