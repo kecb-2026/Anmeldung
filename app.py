@@ -7,11 +7,11 @@ Alle Rechte vorbehalten
 """
 
 
-
 import streamlit as st
 import pandas as pd
 import os
 import requests
+import urllib.parse
 from datetime import datetime, date
 
 # Dateiname für die Excel-Datenbank
@@ -21,7 +21,6 @@ EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
 st.set_page_config(page_title="FFH Ausstellungs-Anmeldung", layout="centered")
 
 # --- INITIALISIERUNG SESSION STATE FÜR ADRESSEN ---
-# Wird benötigt, um die Felder nach der Autocomplete-Suche automatisch zu beschreiben
 if 'strasse_nr' not in st.session_state:
     st.session_state.strasse_nr = ""
 if 'plz_ort' not in st.session_state:
@@ -29,13 +28,27 @@ if 'plz_ort' not in st.session_state:
 if 'land' not in st.session_state:
     st.session_state.land = "Schweiz"
 
-# Hilfsfunktion für die kostenlose Adresssuche (Photon API von Komoot / OpenStreetMap)
+# Optimierte Hilfsfunktion für die Adresssuche (Simuliert einen Browser & bereinigt die Eingabe)
 def suche_adresse(query):
     if not query or len(query) < 4:
         return []
     try:
-        url = f"https://photon.komoot.io/api/?q={requests.utils.quote(query)}&limit=5&lang=de"
-        response = requests.get(url, timeout=3)
+        # Kommas entfernen und Mehrfachleerzeichen bereinigen
+        clean_query = query.replace(",", " ").strip()
+        while "  " in clean_query:
+            clean_query = clean_query.replace("  ", " ")
+            
+        # URL-Encoding durchführen
+        encoded_query = urllib.parse.quote(clean_query)
+        url = f"https://photon.komoot.io/api/?q={encoded_query}&limit=5&lang=de"
+        
+        # User-Agent mitsenden, damit die API die Anfrage nicht als Bot blockiert (Sehr wichtig!)
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+        
+        response = requests.get(url, headers=headers, timeout=5)
+        
         if response.status_code == 200:
             results = response.json().get('features', [])
             suggestions = []
@@ -47,7 +60,6 @@ def suche_adresse(query):
                 city = props.get('city', '')
                 country = props.get('country', '')
                 
-                # Nur brauchbare Adressen mit Strassenname vorschlagen
                 if street:
                     label_parts = [f"{street} {housenumber}".strip()]
                     if postcode or city:
@@ -63,8 +75,9 @@ def suche_adresse(query):
                         "land": country
                     })
             return suggestions
-    except Exception:
-        pass
+    except Exception as e:
+        # Fehler im Streamlit-Protokoll sichtbar machen für Debugging
+        print(f"Fehler bei Adresssuche: {e}")
     return []
 
 st.title("🐾 Anmeldung zur Katzenausstellung")
@@ -75,7 +88,7 @@ st.write("Bitte füllen Sie das Formular vollständig aus.")
 st.subheader("1. Ausstellungsdetails")
 
 # Ausstellungsort über die volle Breite
-ausstellungsort = st.text_input("Ausstellung in *", placeholder="z.B. Burgdorf")
+ausstellungsort = st.text_input("Ausstellung in *", placeholder="z.B. Bern")
 
 # Zeile für Samstag mit Checkbox und Datum direkt dahinter
 col_sat_chk, col_sat_date = st.columns([1, 2])
@@ -145,7 +158,8 @@ with col9:
 with col10:
     katze_geschlecht = st.radio("Geschlecht *", ["1.0 Männlich", "0.1 Weiblich"])
 with col11:
-    katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"])
+    # Standardwert ist "Nein" (Index 1)
+    katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"], index=1)
 
 # Dynamische Klassenfilterung
 gemeinsame_klassen = [
@@ -199,9 +213,8 @@ mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *")
 # --- 4. AUSSTELLER & ZÜCHTER ---
 st.subheader("4. Aussteller & Züchter")
 
-# --- START ADRESS-SUCHE (AUTOCOMPLETE) ---
 st.markdown("🔍 **Schnell-Eingabe der Adresse**")
-suchanfrage = st.text_input("Suchen Sie nach Ihrer Strasse, PLZ oder Ort...", placeholder="z.B. Birkenweg 12 Bern")
+suchanfrage = st.text_input("Suchen Sie nach Ihrer Strasse, PLZ oder Ort...", placeholder="z.B. Schulhausstrasse 22 Moosseedorf")
 
 if len(suchanfrage) >= 4:
     ergebnisse = suche_adresse(suchanfrage)
@@ -210,7 +223,6 @@ if len(suchanfrage) >= 4:
         auswahl_label = st.selectbox("Gefundene Adressen (Bitte anklicken zum Ausfüllen):", options)
         
         if auswahl_label != "-- Bitte wählen --":
-            # Passenden Eintrag heraussuchen und Session-State setzen
             gewaehlt = next(item for item in ergebnisse if item["label"] == auswahl_label)
             st.session_state.strasse_nr = gewaehlt["strasse_nr"]
             st.session_state.plz_ort = gewaehlt["plz_ort"]
@@ -218,15 +230,13 @@ if len(suchanfrage) >= 4:
             st.success("Adresse wurde unten eingetragen!")
     else:
         st.info("Keine direkte Adresse gefunden. Tippen Sie einfach weiter oder tragen Sie sie manuell unten ein.")
-# --- ENDE ADRESS-SUCHE ---
 
-st.markdown("---") # Trennlinie zur optischen Abgrenzung
+st.markdown("---")
 
 col12, col13 = st.columns(2)
 aussteller_nachname = col12.text_input("Nachname (Aussteller) *")
 aussteller_vorname = col13.text_input("Vorname (Aussteller) *")
 
-# Adressfelder nutzen nun die Werte aus dem Session State
 col14, col15 = st.columns([2, 1])
 aussteller_strasse = col14.text_input("Strasse, Nr. *", value=st.session_state.strasse_nr)
 aussteller_ort = col15.text_input("PLZ + Ort *", value=st.session_state.plz_ort)
@@ -298,7 +308,6 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         
         df_neu = pd.DataFrame([neue_anmeldung])
         
-        # In Excel-Datei abspeichern
         if os.path.exists(EXCEL_FILE):
             df_alt = pd.read_excel(EXCEL_FILE)
             df_gesamt = pd.concat([df_alt, df_neu], ignore_index=True)
@@ -309,3 +318,5 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         
         st.success("🎉 Vielen Dank! Die Anmeldung wurde erfolgreich gespeichert.")
         st.balloons()
+
+
