@@ -453,18 +453,4 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
     elif admin_passwort:
         st.error("Ungültiges Admin-Passwort!")
 
-```
-eof
-### WICHTIG: E-Mail-Zugangsdaten in Streamlit Cloud hinterlegen
-Damit die E-Mail-Funktion läuft, müssen Sie die Zugangsdaten für das Postfach des Vereins in Ihrem Streamlit Cloud Dashboard hinterlegen.
- 1. Loggen Sie sich bei **share.streamlit.io** ein.
- 2. Suchen Sie Ihre App in der Liste und klicken Sie rechts auf die drei Punkte ... und wählen Sie **Settings**.
- 3. Gehen Sie links auf das Menü **Secrets**.
- 4. Kopieren Sie die folgenden Zeilen hinein, passen Sie die Daten an das E-Mail-Konto Ihres Vereins an (z.B. von Hostpoint, Bluewin, Gmail, etc.) und klicken Sie auf **Save**:
-```toml
-[smtp]
-server = "mail.gmx.net"      # Ihr SMTP-Server (z.B. mail.gmx.net, smtp.gmail.com, etc.)
-port = 587                  # Meistens 587 (STARTTLS) oder 465 (SSL)
-user = "ausstellung@ihr-verein.ch"  # Der Benutzername (E-Mail-Adresse) Ihres Postfachs
-password = "IhrSicheresE-MailPasswort" # Das Passwort dieses E-Mail-Postfachs
-sender = "ausstellung@ihr-verein.ch"    # Die Absender-E-Mail (meist identisch mit user)
+
