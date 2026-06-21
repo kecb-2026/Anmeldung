@@ -162,16 +162,24 @@ def sende_bestaetigungs_email(daten):
     kopie_verein = sender_email
     betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} - {daten.get('Katze_Name', 'Katze')}"
     
-    # Inhalt sicher zusammenbauen
+     # Erweiterter Inhalt mit allen gewünschten Feldern
     inhalt = (
         f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
-        f"Vielen Dank für Ihre Anmeldung. Hier sind Ihre Daten:\n\n"
-        f"Katze: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
-        f"Klasse: {daten.get('Angemeldete_Klasse', 'Nicht angegeben')}\n"
-        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', 'Nicht angegeben')}\n\n"
+        f"Vielen Dank für Ihre Anmeldung. Hier sind die Daten:\n\n"
+        f"--- KATZENDETAILS ---\n"
+        f"Name: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
+        f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
+        f"Geschlecht: {daten.get('Geschlecht', '')}\n"
+        f"Kastriert: {daten.get('Kastrat', '')}\n"
+        f"Gewicht: {daten.get('Gewicht', '')} kg\n"
+        f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
+        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n\n"
+        f"--- AUSSTELLUNGSDETAILS ---\n"
+        f"Datum/Tage: {daten.get('Angemeldete_Tage', '')}\n"
+        f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
+        f"Bemerkungen: {daten.get('Bemerkungen', 'Keine')}\n\n"
         f"Freundliche Grüsse\nIhr Ausstellungsteam"
     )
-
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
         msg['Subject'] = Header(betreff, 'utf-8')
