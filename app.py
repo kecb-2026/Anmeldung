@@ -149,14 +149,28 @@ def sende_bestaetigungs_email(daten):
         smtp_password = st.secrets["smtp"]["password"]
         sender_email = st.secrets["smtp"]["sender"]
     except Exception:
-        st.warning("⚠️ E-Mail-Bestätigung konnte nicht gesendet werden (Secrets fehlen). Die Anmeldung wurde trotzdem gespeichert!")
+        st.warning("⚠️ E-Mail-Bestätigung konnte nicht gesendet werden (Secrets fehlen).")
         return False
 
-    empfaenger = daten["Email"]
+    # Sicheres Abrufen der Werte mit .get() - verhindert den KeyError
+    # Wenn ein Key fehlt, wird der Standardwert (nach dem Komma) verwendet
+    empfaenger = daten.get("Email")
+    if not empfaenger:
+        st.error("Keine E-Mail-Adresse für den Versand gefunden.")
+        return False
+        
     kopie_verein = sender_email
-    betreff = f"Anmeldebestätigung: {daten['Ausstellungsort']} - {daten['Katze_Name']}"
+    betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} - {daten.get('Katze_Name', 'Katze')}"
     
-    inhalt = f"Guten Tag {daten['Aussteller_Vorname']} {daten['Aussteller_Nachname']}\n\nVielen Dank für Ihre Anmeldung. Hier sind Ihre Daten:\n\nKatze: {daten['Katze_Name']} ({daten['Katze_EMS']})\nKlasse: {daten['Angemeltete_Klasse']}\nZuchtbuch-Nr: {daten['Zuchtbuch_Nr']}\n\nFreundliche Grüsse\nIhr Ausstellungsteam"
+    # Inhalt sicher zusammenbauen
+    inhalt = (
+        f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
+        f"Vielen Dank für Ihre Anmeldung. Hier sind Ihre Daten:\n\n"
+        f"Katze: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
+        f"Klasse: {daten.get('Angemeldete_Klasse', 'Nicht angegeben')}\n"
+        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', 'Nicht angegeben')}\n\n"
+        f"Freundliche Grüsse\nIhr Ausstellungsteam"
+    )
 
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
@@ -164,6 +178,7 @@ def sende_bestaetigungs_email(daten):
         msg['From'] = sender_email
         msg['To'] = empfaenger
         msg['Cc'] = kopie_verein
+        
         server = smtplib.SMTP_SSL(smtp_server, smtp_port) if smtp_port == 465 else smtplib.SMTP(smtp_server, smtp_port)
         if smtp_port != 465: server.starttls()
         server.login(smtp_user, smtp_password)
@@ -173,6 +188,7 @@ def sende_bestaetigungs_email(daten):
     except Exception as e:
         st.error(f"Fehler beim Senden der E-Mail: {e}")
         return False
+
 
 
 st.title("🐾 Anmeldung zur Katzenausstellung")
