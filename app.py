@@ -414,22 +414,45 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         st.error("Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!")
     elif not (samstag_aktiv or sonntag_aktiv):
         st.error("Bitte wählen Sie mindestens einen Ausstellungstag aus.")
-    else:
+        else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
-            "Ausstellungsort": ausstellungsort, "Angemeldete_Tage": wochentag_export,
-            "Katze_Name": katze_name, "Katze_EMS": katze_ems, "Gruppe": katze_gruppe, "Rasse_Farbe": katze_rasse_farbe,
-            "Zuchtbuch_Nr": katze_zuchtbuch, "Chip_Nr": katze_chip, "Geburtsdatum": katze_geboren.strftime("%d.%m.%Y"),
-            "Geschlecht": katze_geschlecht, "Kastrat": katze_kastriert, "Angemeldete_Klasse": ausstellungsklasse,
-            "Gewicht": katze_gewicht, "Bereits_Erhalten": bereits_erhalten,
-            "Vater_Name": vater_name, "Vater_EMS": vater_ems, "Vater_Zuchtbuch": vater_zuchtbuch,
-            "Mutter_Name": mutter_name, "Mutter_EMS": mutter_ems, "Mutter_Zuchtbuch": mutter_zuchtbuch,
-            "Aussteller_Nachname": aussteller_nachname, "Aussteller_Vorname": aussteller_vorname,
-            "Strasse": aussteller_strasse, "PLZ_Ort": aussteller_ort, "Land": aussteller_land,
-            "Telefon": aussteller_telefon, "Email": aussteller_email, "Verein": aussteller_verein,
-            "MitgliedsNr": aussteller_mitgliedsnr, "Zuechter": zuechter_name_land, "Doppelkafig": doppelkafig, "Bemerkungen": bemerkungen
+            "Ausstellungsort": ausstellungsort, 
+            "Angemeldete_Tage": wochentag_export,
+            "Katze_Name": katze_name, 
+            "Katze_EMS": katze_ems, 
+            "Gruppe": katze_gruppe, 
+            "Rasse_Farbe": katze_rasse_farbe,
+            "Zuchtbuch_Nr": katze_zuchtbuch, 
+            "Chip_Nr": katze_chip, 
+            "Geburtsdatum": katze_geboren.strftime("%d.%m.%Y"),
+            "Geschlecht": katze_geschlecht, 
+            "Kastrat": katze_kastriert, 
+            "Angemeldete_Klasse": ausstellungsklasse,
+            "Gewicht": katze_gewicht, 
+            "Bereits_Erhalten": bereits_erhalten,
+            "Vater_Name": vater_name, 
+            "Vater_EMS": vater_ems, 
+            "Vater_Zuchtbuch": vater_zuchtbuch,
+            "Mutter_Name": mutter_name, 
+            "Mutter_EMS": mutter_ems, 
+            "Mutter_Zuchtbuch": mutter_zuchtbuch,
+            "Aussteller_Nachname": aussteller_nachname, 
+            "Aussteller_Vorname": aussteller_vorname,
+            "Strasse": aussteller_strasse, 
+            "PLZ_Ort": aussteller_ort, 
+            "Land": aussteller_land,
+            "Telefon": aussteller_telefon, 
+            "Email": aussteller_email, # <--- WICHTIG: Das hier ist der Key, den die E-Mail-Funktion sucht
+            "Verein": aussteller_verein,
+            "MitgliedsNr": aussteller_mitgliedsnr, 
+            "Zuechter": zuechter_name_land, 
+            "Doppelkafig": doppelkafig, 
+            "Bemerkungen": bemerkungen
         }
         
+        # ... Rest des Codes bleibt gleich
+
         df_neu = pd.DataFrame([neue_anmeldung])
         if os.path.exists(EXCEL_FILE):
             df_gesamt = pd.concat([pd.read_excel(EXCEL_FILE), df_neu], ignore_index=True)
