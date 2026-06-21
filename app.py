@@ -309,5 +309,3 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         
         st.success("🎉 Vielen Dank! Die Anmeldung wurde erfolgreich gespeichert.")
         st.balloons()
-
-```
