@@ -414,7 +414,8 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         st.error("Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!")
     elif not (samstag_aktiv or sonntag_aktiv):
         st.error("Bitte wählen Sie mindestens einen Ausstellungstag aus.")
-        else:
+
+    else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
             "Ausstellungsort": ausstellungsort, 
@@ -452,6 +453,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         }
         
         # ... Rest des Codes bleibt gleich
+
 
         df_neu = pd.DataFrame([neue_anmeldung])
         if os.path.exists(EXCEL_FILE):
