@@ -204,7 +204,8 @@ st.markdown("### Fédération Féline Helvétique (FFH) / FIFe")
 
 # --- 1. AUSSTELLUNGSDETAILS ---
 st.subheader("1. Ausstellungsdetails")
-ausstellungsort = st.text_input("Ausstellung in *", placeholder="z.B. Bern")
+ausstellungsort = st.text_input("Ausstellung in *", value="Burgdorf")
+
 
 col_sat_chk, col_sat_date = st.columns([1, 2])
 with col_sat_chk:
