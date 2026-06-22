@@ -359,7 +359,7 @@ else:
 
 ausstellungsklasse = st.selectbox("Klasse für die gemeldet wird *", klassen_optionen)
 katze_gewicht = st.text_input("Gewicht der Katze (kg)", placeholder="z.B. 4.5")
-bereits_erhalten = st.text_input("Bereits erhalten in / Point obtenu à l'exposition de")
+# bereits_erhalten = st.text_input("Bereits erhalten in / Point obtenu à l'exposition de")
 
 
 # --- 3. STAMMBAUM (ELTERN) ---
