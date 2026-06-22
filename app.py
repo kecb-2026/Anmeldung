@@ -6,8 +6,6 @@ Copyright (c) 2026 Brigitte Portner
 Alle Rechte vorbehalten
 """
 
-
-
 import streamlit as st
 import pandas as pd
 import os
@@ -57,7 +55,8 @@ session_defaults = {
     'm_name': "",
     'm_ems': "",
     'm_zuchtbuch': "",
-    'z_zuechter': ""
+    'z_zuechter': "",
+    'admin_logged_in': False
 }
 
 for key, val in session_defaults.items():
@@ -176,28 +175,28 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if samstag_aktiv and monate_sa < 8:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
         if samstag_aktiv and monate_sa >= 12:
-            return f"Die Katze ist am Samstag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
         
         # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
-            return f"Die Katze ist am Sonntag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
 
     # Klasse 12 (Kittenklasse 4-8 Monate)
     if "12." in kl:
         if samstag_aktiv and monate_sa < 4:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
         if samstag_aktiv and monate_sa >= 8:
-            return f"Die Katze ist am Samstag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
         
         # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
-            return f"Die Katze ist am Sonntag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
 
     return None, hinweis_umwertung
 
@@ -544,7 +543,21 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
 
 # --- ADMIN ---
 with st.expander("🔐 Admin-Bereich"):
-    if st.text_input("Passwort", type="password") == "ffh2026":
+    if not st.session_state.admin_logged_in:
+        with st.form("admin_login_form"):
+            admin_passwort = st.text_input("Passwort", type="password")
+            login_submit = st.form_submit_button("Anmelden")
+            if login_submit:
+                if admin_passwort == "ffh2026":
+                    st.session_state.admin_logged_in = True
+                    st.rerun()
+                else:
+                    st.error("Falsches Passwort!")
+    else:
+        if st.button("Abmelden"):
+            st.session_state.admin_logged_in = False
+            st.rerun()
+            
         if os.path.exists(EXCEL_FILE):
             with open(EXCEL_FILE, "rb") as f:
                 st.download_button("📥 Excel herunterladen", f.read(), "ausstellung_anmeldungen.xlsx")
