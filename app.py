@@ -447,29 +447,13 @@ agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akz
 
 # --- ABSENDEN LOGIK ---
 if st.button("Anmeldung verbindlich absenden", type="primary"):
-    felder = {
-        "Ausstellungsort": ausstellungsort, "Name der Katze": katze_name, "EMS-Code": katze_ems,
-        "Rasse + Farbe": katze_rasse_farbe, "Zuchtbuch-Nr.": katze_zuchtbuch, "Nachname": aussteller_nachname,
-        "Vorname": aussteller_vorname, "Strasse": aussteller_strasse, "PLZ + Ort": aussteller_ort,
-        "Land": aussteller_land, "Telefon": aussteller_telefon, "E-Mail": aussteller_email,
-        "Verein": aussteller_verein, "Züchter": zuechter_name_land, "AGB Akzeptanz": agb_akzeptiert
-    }
-    
-    fehlende = [name for name, wert in felder.items() if not wert]
-
-    if fehlende:
-        st.error("Bitte füllen Sie folgende Pflichtfelder aus:")
-        for f in fehlende:
-            st.markdown(f"- :red[**{f}**]")
-            
+    if not (ausstellungsort and katze_name and aussteller_nachname and aussteller_email and agb_akzeptiert):
+        st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
     elif ausstellungsklasse == "-":
         # Blockiert das Absenden, wenn die Klasse nicht gewählt wurde
-        st.error(":red[Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!]")
-        
+        st.error("Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!")
     elif not (samstag_aktiv or sonntag_aktiv):
-        # Blockiert das Absenden, wenn kein Tag gewählt wurde
-        st.error(":red[Bitte wählen Sie mindestens einen Ausstellungstag aus.]")
-
+        st.error("Bitte wählen Sie mindestens einen Ausstellungstag aus.")
 
     else:
         neue_anmeldung = {
