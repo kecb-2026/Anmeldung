@@ -1,3 +1,4 @@
+```python
 # -*- coding: utf-8 -*-
 
 """
@@ -46,7 +47,8 @@ session_defaults = {
     'k_kastriert': "Nein",
     # Eltern
     'v_name': "", 'v_ems': "", 'v_zuchtbuch': "",
-    'm_name': "", 'm_ems': "", 'm_zuchtbuch': ""
+    'm_name': "", 'm_ems': "", 'm_zuchtbuch': "",
+    'z_zuechter': ""
 }
 
 for key, val in session_defaults.items():
@@ -316,6 +318,7 @@ if df_stamm is not None:
                     st.session_state.m_name = safe_str(row.get('Mutter_Name', ''))
                     st.session_state.m_ems = safe_str(row.get('Mutter_EMS', ''))
                     st.session_state.m_zuchtbuch = safe_str(row.get('Mutter_Zuchtbuch', ''))
+                    st.session_state.z_zuechter = safe_str(row.get('Züchter', ''))
                     
                     st.success(f"✅ Daten für '{st.session_state.k_name}' erfolgreich geladen!")
                     st.rerun()
@@ -363,7 +366,7 @@ katze_gewicht = st.text_input("Gewicht der Katze (kg)", placeholder="z.B. 4.5")
 # bereits_erhalten = st.text_input("Bereits erhalten in / Point obtenu à l'exposition de")
 
 
-# --- 3. STAMMBAUM (ELTERN) ---
+# --- 3. STAMMBAUM (ELTERN) & ZÜCHTER ---
 # Bereich wird ausgeblendet, wenn bereits eine Zuchtbuch-Nr im Session State existiert
 if not st.session_state.k_zuchtbuch:
     with st.container():
@@ -379,6 +382,8 @@ if not st.session_state.k_zuchtbuch:
         mutter_name = col_m1.text_input("Name der Mutter *", value=st.session_state.m_name)
         mutter_ems = col_m2.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
         mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
+        
+        zuechter_name_land = st.text_input("Züchter + Land *")
 else:
     # Falls Daten geladen wurden, müssen die Variablen für den Absende-Prozess trotzdem existieren
     vater_name = st.session_state.v_name
@@ -387,6 +392,7 @@ else:
     mutter_name = st.session_state.m_name
     mutter_ems = st.session_state.m_ems
     mutter_zuchtbuch = st.session_state.m_zuchtbuch
+    zuechter_name_land = st.session_state.z_zuechter
 
 
 # --- 4. AUSSTELLER & ZÜCHTER ---
@@ -424,7 +430,10 @@ aussteller_email = st.text_input("E-Mail-Adresse *")
 col18, col19 = st.columns([2, 1])
 aussteller_verein = col18.text_input("Mitglied bei (Katzclub/Verein) *")
 aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
-zuechter_name_land = st.text_input("Züchter + Land *")
+if not st.session_state.k_zuchtbuch:
+    zuechter_name_land = st.text_input("Züchter + Land *")
+else:
+    zuechter_name_land = st.session_state.z_zuechter
 
 
 # --- 5. BEMERKUNGEN & BESTÄTIGUNG ---
@@ -460,7 +469,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Kastrat": katze_kastriert, 
             "Angemeldete_Klasse": ausstellungsklasse,
             "Gewicht": katze_gewicht, 
-            "Bereits_Erhalten": bereits_erhalten,
+            "Bereits_Erhalten": "",
             "Vater_Name": vater_name, 
             "Vater_EMS": vater_ems, 
             "Vater_Zuchtbuch": vater_zuchtbuch,
@@ -507,3 +516,5 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
             st.dataframe(pd.read_excel(EXCEL_FILE))
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
+
+```
