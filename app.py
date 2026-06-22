@@ -563,11 +563,26 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         except Exception as e:
             st.error(f"Fehler beim Übermitteln der Anmeldung: {e}")
 
-# --- ADMIN ---
-import io # Oben bei deinen Imports hinzufügen
+## --- ADMIN ---
+import io 
+
+if 'admin_logged_in' not in st.session_state:
+    st.session_state.admin_logged_in = False
 
 with st.expander("🔐 Admin-Bereich"):
-    if st.text_input("Passwort", type="password") == "ffh2026":
+    if not st.session_state.admin_logged_in:
+        passwort = st.text_input("Passwort", type="password")
+        if st.button("Anmelden"):
+            if passwort == "ffh2026":
+                st.session_state.admin_logged_in = True
+                st.rerun()
+            else:
+                st.error("Falsches Passwort")
+    else:
+        if st.button("Abmelden"):
+            st.session_state.admin_logged_in = False
+            st.rerun()
+            
         try:
             creds_dict = json.loads(st.secrets["gcp"]["json_key"])
             gc = gspread.service_account_from_dict(creds_dict)
@@ -583,7 +598,7 @@ with st.expander("🔐 Admin-Bereich"):
                 
                 # Excel-Datei im Speicher erstellen
                 output = io.BytesIO()
-                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df_anzeige.to_excel(writer, index=False, sheet_name='Anmeldungen')
                 excel_data = output.getvalue()
                 
