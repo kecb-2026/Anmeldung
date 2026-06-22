@@ -15,16 +15,9 @@ import smtplib
 from email.mime.text import MIMEText
 from email.header import Header
 from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
-# Verbindung zu Google Sheets hinzufügen
-from streamlit_gsheets import GSheetsConnection
 
-# Unterstützt sowohl den Dateinamen deiner hochgeladenen CSV als auch Excel-Varianten
-STAMMDATEN_DATEIEN = [
-    "2026.xlsx - Sheet1.csv",
-    "2026.xlsx",
-    "katzen_stammdaten.xlsx"
-]
+# --- EINFACHE CLOUD-SPEICHERUNG (OHNE GOOGLE-ANMELDUNG) ---
+DB_URL = "https://kvdb.io/KECB_Burgdorf_2026_CatShow/anmeldungen"
 
 # Seite konfigurieren
 st.set_page_config(
@@ -32,13 +25,24 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- GOOGLE SHEETS VERBINDUNG INITIALISIEREN ---
-# Greift auf die in .upstream/secrets.toml hinterlegte Spreadsheet-URL zu
-try:
-    conn = st.connection("gsheets", type=GSheetsConnection)
-except Exception as e:
-    st.error(f"Fehler bei der Verbindung zu Google Sheets: {e}")
-    conn = None
+# --- FUNKTIONEN FÜR DEN DATENUP- & DOWNLOAD ---
+def cloud_daten_laden():
+    try:
+        response = requests.get(DB_URL, timeout=5)
+        if response.status_code == 200:
+            return pd.DataFrame(response.json())
+    except:
+        pass
+    return pd.DataFrame()
+
+def cloud_daten_speichern(df):
+    try:
+        json_daten = df.to_dict(orient="records")
+        requests.post(DB_URL, json=json_daten, timeout=5)
+        return True
+    except Exception as e:
+        st.error(f"Fehler beim Cloud-Backup: {e}")
+        return False
 
 # --- INITIALISIERUNG SESSION STATE FÜR ADRESSEN & KATZEN-AUTOFILL ---
 session_defaults = {
@@ -89,13 +93,18 @@ def extrahiere_ziffern(wert):
     return "".join(filter(str.isdigit, text))
 
 def lade_stammdaten():
+    STAMMDATEN_DATEIEN = [
+        "2026.xlsx - Sheet1.csv",
+        "2026.xlsx",
+        "katzen_stammdaten.xlsx"
+    ]
     for d in STAMMDATEN_DATEIEN:
         if os.path.exists(d):
             if d.endswith(".xlsx"):
                 try:
                     return pd.read_excel(d), d
-                except Exception as e:
-                    print(f"Fehler: {e}")
+                except:
+                    pass
             elif d.endswith(".csv"):
                 for sep in [";", ","]:
                     try:
@@ -105,20 +114,6 @@ def lade_stammdaten():
                             return pd.read_csv(d, sep=sep, encoding="latin-1"), d
                         except:
                             pass
-    dateien = os.listdir(".")
-    for d in dateien:
-        if d.startswith("2026") or "stammdaten" in d.lower():
-            if d.endswith(".xlsx") and d not in STAMMDATEN_DATEIEN:
-                try:
-                    return pd.read_excel(d), d
-                except:
-                    pass
-            elif d.endswith(".csv") and d not in STAMMDATEN_DATEIEN:
-                for sep in [";", ","]:
-                    try:
-                        return pd.read_csv(d, sep=sep, encoding="utf-8"), d
-                    except:
-                        pass
     return None, None
 
 def suche_adresse(query):
@@ -150,8 +145,8 @@ def suche_adresse(query):
                         "land": country
                     })
             return suggestions
-    except Exception as e:
-        print(f"Fehler: {e}")
+    except:
+        pass
     return []
 
 def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_aktiv):
@@ -168,8 +163,8 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
     monate_so = get_monate(datum_so) if sonntag_aktiv else None
     
     hinweis_umwertung = ""
-
     erwachsenen_klassen = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
+    
     if any(kl.startswith(prefix) for prefix in erwachsenen_klassen):
         if samstag_aktiv and monate_sa < 12:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
@@ -181,10 +176,8 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
         if samstag_aktiv and monate_sa >= 12:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
-        
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
-
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
 
@@ -193,10 +186,8 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
         if samstag_aktiv and monate_sa >= 8:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
-        
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
-
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
 
@@ -209,7 +200,7 @@ def sende_bestaetigungs_email(daten):
         smtp_user = st.secrets["smtp"]["user"]
         smtp_password = st.secrets["smtp"]["password"]
         sender_email = st.secrets["smtp"]["sender"]
-    except Exception:
+    except:
         return False
     
     empfaenger = daten.get("Email")
@@ -251,8 +242,7 @@ def sende_bestaetigungs_email(daten):
         server.sendmail(sender_email, [empfaenger, kopie_verein], msg.as_string())
         server.quit()
         return True
-    except Exception as e:
-        st.error(f"Fehler beim E-Mail-Versand: {e}")
+    except:
         return False
 
 st.title("🐾 Anmeldung zur Katzenausstellung Burgdorf 2026")
@@ -285,7 +275,7 @@ if sonntag_aktiv:
     gewaehlte_tage.append(f"Sonntag ({datum_sonntag.strftime('%d.%m.%Y')})")
 wochentag_export = ", ".join(gewaehlte_tage)
 
-# --- 2. AUTOMATISCHER KATZEN- & AUSSTELLER-SUCHFILTER ---
+# --- 2. AUTOMATISCHER KATZEN-SUCHFILTER ---
 st.subheader("2. Angaben zur Katze")
 df_stamm, gefundener_dateiname = lade_stammdaten()
 
@@ -435,40 +425,29 @@ if hinweis_umwertung:
 
 katze_gewicht = st.text_input("Gewicht der Katze (kg)")
 
-# --- STAMMBAUM & ZÜCHTER ---
-if not st.session_state.k_zuchtbuch:
-    with st.container():
-        st.subheader("3. Stammbaum (Eltern)")
-        vater_name = st.text_input("Name des Vaters *", value=st.session_state.v_name)
-        vater_ems = st.text_input("EMS-Code Vater *", value=st.session_state.v_ems)
-        vater_zuchtbuch = st.text_input("Zuchtbuch-Nr. Vater *", value=st.session_state.v_zuchtbuch)
-        mutter_name = st.text_input("Name der Mutter *", value=st.session_state.m_name)
-        mutter_ems = st.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
-        mutter_zuchtbuch = st.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
-        zuechter_name_land = st.text_input("Züchter + Land *", key="zuechter_input_1")
-else:
-    vater_name = st.session_state.v_name
-    vater_ems = st.session_state.v_ems
-    vater_zuchtbuch = st.session_state.v_zuchtbuch
-    mutter_name = st.session_state.m_name
-    mutter_ems = st.session_state.m_ems
-    mutter_zuchtbuch = st.session_state.m_zuchtbuch
-    zuechter_name_land = st.session_state.z_zuechter
+# --- 3. STAMMBAUM (ELTERN) ---
+st.subheader("3. Stammbaum (Eltern)")
+vater_name = st.text_input("Name des Vaters *", value=st.session_state.v_name)
+vater_ems = st.text_input("EMS-Code Vater *", value=st.session_state.v_ems)
+vater_zuchtbuch = st.text_input("Zuchtbuch-Nr. Vater *", value=st.session_state.v_zuchtbuch)
+mutter_name = st.text_input("Name der Mutter *", value=st.session_state.mutter_name if 'mutter_name' in dir() else st.session_state.m_name)
+mutter_ems = st.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
+mutter_zuchtbuch = st.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
+zuechter_name_land = st.text_input("Züchter + Land *", value=st.session_state.z_zuechter)
 
-# --- AUSSTELLER ---
+# --- 4. AUSSTELLER ---
 st.subheader("4. Aussteller & Züchter")
-if not st.session_state.a_strasse:
-    suchanfrage = st.text_input("Suchen Sie nach Ihrer Adresse...", placeholder="z.B. Musterweg 7 Zürich")
-    if len(suchanfrage) >= 4:
-        ergebnisse = suche_adresse(suchanfrage)
-        if ergebnisse:
-            auswahl_label = st.selectbox("Gefundene Adressen:", ["-- Bitte wählen --"] + [r["label"] for r in ergebnisse])
-            if auswahl_label != "-- Bitte wählen --":
-                gewaehlt = next(item for item in ergebnisse if item["label"] == auswahl_label)
-                st.session_state.a_strasse = gewaehlt["strasse_nr"]
-                st.session_state.a_plz_ort = gewaehlt["plz_ort"]
-                st.session_state.a_land = gewaehlt["land"]
-                st.rerun()
+suchanfrage = st.text_input("Suchen Sie nach Ihrer Adresse...", placeholder="z.B. Musterweg 7 Zürich")
+if len(suchanfrage) >= 4:
+    ergebnisse = suche_adresse(suchanfrage)
+    if ergebnisse:
+        auswahl_label = st.selectbox("Gefundene Adressen:", ["-- Bitte wählen --"] + [r["label"] for r in ergebnisse])
+        if auswahl_label != "-- Bitte wählen --":
+            gewaehlt = next(item for item in ergebnisse if item["label"] == auswahl_label)
+            st.session_state.a_strasse = gewaehlt["strasse_nr"]
+            st.session_state.a_plz_ort = gewaehlt["plz_ort"]
+            st.session_state.a_land = gewaehlt["land"]
+            st.rerun()
 
 col12, col13 = st.columns(2)
 aussteller_nachname = col12.text_input("Nachname *", value=st.session_state.a_nachname)
@@ -484,7 +463,7 @@ col18, col19 = st.columns([2, 1])
 aussteller_verein = col18.text_input("Verein *")
 aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
 
-# --- BEMERKUNGEN & ABSENDEN ---
+# --- 5. BEMERKUNGEN & ABSENDEN ---
 st.subheader("5. Bemerkungen & Einverständnis")
 doppelkafig = st.text_input("Doppelkäfig zusammen mit:")
 bemerkungen = st.text_area("Bemerkungen")
@@ -496,9 +475,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
     elif ausstellungsklasse == "-":
         st.error("Bitte wählen Sie eine Ausstellungsklasse!")
     elif warnung_text:
-        st.error(f"Absenden blockiert aufgrund eines schweren Altersfehlers: {warnung_text}")
-    elif conn is None:
-        st.error("Speichern fehlgeschlagen: Keine Verbindung zu Google Sheets vorhanden.")
+        st.error(f"Absenden blockiert aufgrund eines schweren Altersfehles: {warnung_text}")
     else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
@@ -536,12 +513,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Bemerkungen": bemerkungen if bemerkungen else "Keine"
         }
         
-        # Bestehende Daten aus Google Sheet live abrufen
-        try:
-            df_gesamt = conn.read(ttl="0") # Kein Cache, um immer frische Daten zu haben
-        except Exception:
-            df_gesamt = pd.DataFrame()
-            
+        df_gesamt = cloud_daten_laden()
         df_neu = pd.DataFrame([neue_anmeldung])
         
         if not df_gesamt.empty:
@@ -549,22 +521,17 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         else:
             df_gesamt = df_neu
             
-        # Aktualisiertes Dokument direkt wieder in Google Drive hochladen
-        try:
-            conn.update(data=df_gesamt)
+        if cloud_daten_speichern(df_gesamt):
             sende_bestaetigungs_email(neue_anmeldung)
-            st.success("Erfolgreich in Cloud gespeichert!")
+            st.success("Erfolgreich in Cloud gespeichert und gesichert!")
             st.balloons()
-        except Exception as e:
-            st.error(f"Fehler beim Speichern in der Cloud: {e}")
 
 # --- ADMIN-BEREICH ---
 with st.expander("🔐 Admin-Bereich"):
     if not st.session_state.admin_logged_in:
         with st.form("admin_login_form"):
             admin_passwort = st.text_input("Passwort", type="password")
-            login_submit = st.form_submit_button("Anmelden")
-            if login_submit:
+            if st.form_submit_button("Anmelden"):
                 if admin_passwort == "ffh2026":
                     st.session_state.admin_logged_in = True
                     st.rerun()
@@ -575,16 +542,10 @@ with st.expander("🔐 Admin-Bereich"):
             st.session_state.admin_logged_in = False
             st.rerun()
             
-        if conn is not None:
-            try:
-                # Holt die Live-Daten direkt aus Google Drive für den Admin
-                df_cloud = conn.read(ttl="0")
-                if not df_cloud.empty:
-                    # Ermöglicht das Herunterladen der aktuellen Daten
-                    csv_data = df_cloud.to_csv(index=False).encode('utf-8')
-                    st.download_button("📥 Daten als CSV herunterladen", csv_data, "ausstellung_anmeldungen.csv", "text/csv")
-                    st.dataframe(df_cloud)
-                else:
-                    st.info("ℹ️ Bisher sind noch keine Anmeldungen im Google Sheet hinterlegt.")
-            except Exception as e:
-                st.error(f"Fehler beim Laden aus Google Sheets: {e}")
+        df_cloud = cloud_daten_laden()
+        if not df_cloud.empty:
+            csv_data = df_cloud.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Daten als CSV herunterladen", csv_data, "ausstellung_anmeldungen.csv", "text/csv")
+            st.dataframe(df_cloud)
+        else:
+            st.info("ℹ️ Bisher sind noch keine Anmeldungen in der Cloud hinterlegt.")
