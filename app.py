@@ -174,28 +174,28 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if samstag_aktiv and monate_sa < 8:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
         if samstag_aktiv and monate_sa >= 12:
-            return f"Die Katze ist am Samstag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
         
         # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
-            return f"Die Katze ist am Sonntag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
 
     # Klasse 12 (Kittenklasse 4-8 Monate)
     if "12." in kl:
         if samstag_aktiv and monate_sa < 4:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
         if samstag_aktiv and monate_sa >= 8:
-            return f"Die Katze ist am Samstag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
         
         # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
-            return f"Die Katze ist am Sonntag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
 
     return None, hinweis_umwertung
 
