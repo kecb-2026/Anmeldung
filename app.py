@@ -16,9 +16,8 @@ from email.mime.text import MIMEText
 from email.header import Header
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
-
-# Dateiname für das Speichern der Anmeldungen
-EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
+# Verbindung zu Google Sheets hinzufügen
+from streamlit_gsheets import GSheetsConnection
 
 # Unterstützt sowohl den Dateinamen deiner hochgeladenen CSV als auch Excel-Varianten
 STAMMDATEN_DATEIEN = [
@@ -32,6 +31,14 @@ st.set_page_config(
     page_title="FFH Ausstellungs-Anmeldung",
     layout="centered"
 )
+
+# --- GOOGLE SHEETS VERBINDUNG INITIALISIEREN ---
+# Greift auf die in .upstream/secrets.toml hinterlegte Spreadsheet-URL zu
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+except Exception as e:
+    st.error(f"Fehler bei der Verbindung zu Google Sheets: {e}")
+    conn = None
 
 # --- INITIALISIERUNG SESSION STATE FÜR ADRESSEN & KATZEN-AUTOFILL ---
 session_defaults = {
@@ -162,7 +169,6 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
     
     hinweis_umwertung = ""
 
-    # Erwachsenenklassen (1-10): Punktgenau ab dem 12. Geburtstag (12 Monate)
     erwachsenen_klassen = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
     if any(kl.startswith(prefix) for prefix in erwachsenen_klassen):
         if samstag_aktiv and monate_sa < 12:
@@ -170,28 +176,24 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if sonntag_aktiv and monate_so < 12:
             return f"Die Katze ist am Sonntag erst {monate_so} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
 
-    # Klasse 11 (Jugendklasse 8-12 Monate)
     if "11." in kl:
         if samstag_aktiv and monate_sa < 8:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
         if samstag_aktiv and monate_sa >= 12:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
         
-        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
 
-    # Klasse 12 (Kittenklasse 4-8 Monate)
     if "12." in kl:
         if samstag_aktiv and monate_sa < 4:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
         if samstag_aktiv and monate_sa >= 8:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
         
-        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
             hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
 
@@ -495,6 +497,8 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         st.error("Bitte wählen Sie eine Ausstellungsklasse!")
     elif warnung_text:
         st.error(f"Absenden blockiert aufgrund eines schweren Altersfehlers: {warnung_text}")
+    elif conn is None:
+        st.error("Speichern fehlgeschlagen: Keine Verbindung zu Google Sheets vorhanden.")
     else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
@@ -531,17 +535,30 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Hinweis_Umwertung": hinweis_umwertung if hinweis_umwertung else "Keine automatische Umwertung nötig.",
             "Bemerkungen": bemerkungen if bemerkungen else "Keine"
         }
+        
+        # Bestehende Daten aus Google Sheet live abrufen
+        try:
+            df_gesamt = conn.read(ttl="0") # Kein Cache, um immer frische Daten zu haben
+        except Exception:
+            df_gesamt = pd.DataFrame()
+            
         df_neu = pd.DataFrame([neue_anmeldung])
-        if os.path.exists(EXCEL_FILE):
-            df_gesamt = pd.concat([pd.read_excel(EXCEL_FILE), df_neu], ignore_index=True)
+        
+        if not df_gesamt.empty:
+            df_gesamt = pd.concat([df_gesamt, df_neu], ignore_index=True)
         else:
             df_gesamt = df_neu
-        df_gesamt.to_excel(EXCEL_FILE, index=False)
-        sende_bestaetigungs_email(neue_anmeldung)
-        st.success("Erfolgreich!")
-        st.balloons()
+            
+        # Aktualisiertes Dokument direkt wieder in Google Drive hochladen
+        try:
+            conn.update(data=df_gesamt)
+            sende_bestaetigungs_email(neue_anmeldung)
+            st.success("Erfolgreich in Cloud gespeichert!")
+            st.balloons()
+        except Exception as e:
+            st.error(f"Fehler beim Speichern in der Cloud: {e}")
 
-# --- ADMIN ---
+# --- ADMIN-BEREICH ---
 with st.expander("🔐 Admin-Bereich"):
     if not st.session_state.admin_logged_in:
         with st.form("admin_login_form"):
@@ -558,9 +575,16 @@ with st.expander("🔐 Admin-Bereich"):
             st.session_state.admin_logged_in = False
             st.rerun()
             
-        if os.path.exists(EXCEL_FILE):
-            with open(EXCEL_FILE, "rb") as f:
-                st.download_button("📥 Excel herunterladen", f.read(), "ausstellung_anmeldungen.xlsx")
-            st.dataframe(pd.read_excel(EXCEL_FILE))
-        else:
-            st.info("ℹ️ Bisher sind noch keine Anmeldungen eingegangen. Die Excel-Datei wird automatisch beim ersten Absenden erstellt.")
+        if conn is not None:
+            try:
+                # Holt die Live-Daten direkt aus Google Drive für den Admin
+                df_cloud = conn.read(ttl="0")
+                if not df_cloud.empty:
+                    # Ermöglicht das Herunterladen der aktuellen Daten
+                    csv_data = df_cloud.to_csv(index=False).encode('utf-8')
+                    st.download_button("📥 Daten als CSV herunterladen", csv_data, "ausstellung_anmeldungen.csv", "text/csv")
+                    st.dataframe(df_cloud)
+                else:
+                    st.info("ℹ️ Bisher sind noch keine Anmeldungen im Google Sheet hinterlegt.")
+            except Exception as e:
+                st.error(f"Fehler beim Laden aus Google Sheets: {e}")
