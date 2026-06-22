@@ -8,3 +8,5 @@ pillow
 reportlab
 supabase
 requests
+xlsxwriter
+
