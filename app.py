@@ -159,9 +159,9 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
     monate_sa = get_monate(datum_sa) if samstag_aktiv else None
     monate_so = get_monate(datum_so) if sonntag_aktiv else None
     
-    hinweis_umwertung = ""
+    hinweis_ummeldung = ""
 
-    # Erwachsenenklassen (1-10): Punktgenau ab dem 12. Geburtstag (12 Monate)
+    # Erwachsenenklassen (1-10)
     erwachsenen_klassen = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
     if any(kl.startswith(prefix) for prefix in erwachsenen_klassen):
         if samstag_aktiv and monate_sa < 12:
@@ -176,9 +176,9 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if samstag_aktiv and monate_sa >= 12:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
         
-        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
+        # Fall 2: Katze wechselt von 11 zu Erwachsenenklasse am Sonntag
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
-            hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
+            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse umgemeldet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
@@ -190,14 +190,14 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if samstag_aktiv and monate_sa >= 8:
             return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
         
-        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
+        # Fall 1: Katze wechselt von 12 zu 11 am Sonntag
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
-            hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
+            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgemeldet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
 
-    return None, hinweis_umwertung
+    return None, hinweis_ummeldung
 
 def sende_bestaetigungs_email(daten):
     try:
@@ -229,11 +229,18 @@ def sende_bestaetigungs_email(daten):
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Datum/Tage: {daten.get('Angemeldete_Tage', '')}\n"
         f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n\n"
-        f"--- WICHTIGE HINWEISE & BEMERKUNGEN ---\n"
-        f"Umgruppierung: {daten.get('Hinweis_Umwertung', 'Keine automatische Umwertung nötig.')}\n"
+    )
+
+    # Hier nur einfügen, wenn ein Hinweis existiert
+    hinweis = daten.get('Hinweis_Ummeldung', '')
+    if hinweis:
+        inhalt += f"--- WICHTIGE HINWEISE ---\n{hinweis}\n\n"
+    
+    inhalt += (
         f"Deine Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
         f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
     )
+    
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
         msg['Subject'] = Header(betreff, 'utf-8')
@@ -415,8 +422,8 @@ else:
 
 ausstellungsklasse = st.selectbox("Klasse für die gemeldet wird *", klassen_optionen)
 
-# --- ALTERS-WARNUNG & AUTOMATISCHE UMWERTUNGS-PRÜFUNG ---
-warnung_text, hinweis_umwertung = pruefe_alter_warnung(
+# --- ALTERS-WARNUNG ---
+warnung_text, hinweis_ummeldung = pruefe_alter_warnung(
     katze_geboren,
     ausstellungsklasse,
     datum_samstag,
@@ -427,8 +434,8 @@ warnung_text, hinweis_umwertung = pruefe_alter_warnung(
 
 if warnung_text:
     st.error(f"❌ {warnung_text}")
-if hinweis_umwertung:
-    st.warning(f"⚠️ {hinweis_umwertung}")
+if hinweis_ummeldung:
+    st.warning(f"⚠️ {hinweis_ummeldung}")
 
 katze_gewicht = st.text_input("Gewicht der Katze (kg)")
 
@@ -485,7 +492,7 @@ aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
 st.subheader("5. Bemerkungen & Einverständnis")
 doppelkafig = st.text_input("Doppelkäfig zusammen mit:")
 bemerkungen = st.text_area("Bemerkungen")
-agb_akzeptiert = st.checkbox("Ich akzeptiere die FIFé/FFH Regeln. *")
+agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akzeptiere die FIFé/FFH Regeln. *")
 
 if st.button("Anmeldung verbindlich absenden", type="primary"):
     if not (ausstellungsort and katze_name and aussteller_nachname and aussteller_email and agb_akzeptiert):
@@ -493,7 +500,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
     elif ausstellungsklasse == "-":
         st.error("Bitte wählen Sie eine Ausstellungsklasse!")
     elif warnung_text:
-        st.error(f"Absenden blockiert aufgrund eines schweren Altersfehlers: {warnung_text}")
+        st.error(f"Absenden blockiert weil Sie einen falsche Klasse ausgewählt haben: {warnung_text}")
     else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
@@ -527,7 +534,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "MitgliedsNr": aussteller_mitgliedsnr,
             "Zuechter": zuechter_name_land,
             "Doppelkafig": doppelkafig,
-            "Hinweis_Umwertung": hinweis_umwertung if hinweis_umwertung else "Keine automatische Umwertung nötig.",
+            "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
             "Bemerkungen": bemerkungen if bemerkungen else "Keine"
         }
         df_neu = pd.DataFrame([neue_anmeldung])
@@ -537,7 +544,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             df_gesamt = df_neu
         df_gesamt.to_excel(EXCEL_FILE, index=False)
         sende_bestaetigungs_email(neue_anmeldung)
-        st.success("Erfolgreich!")
+        st.success("Besten Dank für Ihre Anmeldung!")
         st.balloons()
 
 # --- ADMIN ---
