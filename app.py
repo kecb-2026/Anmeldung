@@ -183,34 +183,37 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
     erwachsenen_klassen = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
     if any(kl.startswith(prefix) for prefix in erwachsenen_klassen):
         if samstag_aktiv and monate_sa < 12:
-            return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
+            return f"Die Katze ist am Samstag {monate_sa} Monate alt. In den Klassen 1-10 darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
         if sonntag_aktiv and monate_so < 12:
-            return f"Die Katze ist am Sonntag erst {monate_so} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag {monate_so} Monate alt. In den Klassen 1-10 darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
 
     # Klasse 11 (Jugendklasse 8-12 Monate)
     if "11." in kl:
         if samstag_aktiv and monate_sa < 8:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
         if samstag_aktiv and monate_sa >= 12:
-            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 11. Klasse und muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für Klasse 11 und muss in der offene Klasse (CAC oder CAP) gemeldet werden.", ""
         
         # Fall 2: Katze wechselt von 11 zu Erwachsenenklasse am Sonntag
         if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
-            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse umgemeldet werden!"
+            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die offene Klasse (CAC oder CAP) umgemeldet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
-            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine der Klassen (1-10) gemeldet werden.", ""
 
     # Klasse 12 (Kittenklasse 4-8 Monate)
     if "12." in kl:
         if samstag_aktiv and monate_sa < 4:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
         if samstag_aktiv and monate_sa >= 8:
-            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für die 12. Klasse und muss in Klasse 11 oder eine Erwachsenenklasse gemeldet werden.", ""
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für Klasse 12 und muss in Klasse 11 gemeldet werden.", ""
+        if samstag_aktiv and monate_sa >= 12:
+            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für Klasse 12 und muss in der offenen Klasse (CAC oddr CAP) gemeldet werden.", ""
+        
         
         # Fall 1: Katze wechselt von 12 zu 11 am Sonntag
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
-            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgemeldet werden!"
+            hinweis_ummeldung = "HINWEIS: Katze vollendet am Sonntag den 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgemeldet werden!"
 
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
