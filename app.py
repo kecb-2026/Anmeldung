@@ -564,6 +564,8 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             st.error(f"Fehler beim Übermitteln der Anmeldung: {e}")
 
 # --- ADMIN ---
+import io # Oben bei deinen Imports hinzufügen
+
 with st.expander("🔐 Admin-Bereich"):
     if st.text_input("Passwort", type="password") == "ffh2026":
         try:
@@ -571,11 +573,28 @@ with st.expander("🔐 Admin-Bereich"):
             gc = gspread.service_account_from_dict(creds_dict)
             sh = gc.open("ausstellung_anmeldungen")
             worksheet = sh.sheet1
-            data = worksheet.get_all_records()
-            df_anzeige = pd.DataFrame(data)
-            st.write(f"Anzahl Anmeldungen: {len(df_anzeige)}")
-            st.dataframe(df_anzeige)
-            csv = df_anzeige.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Alle Anmeldungen als CSV herunterladen", csv, "alle_anmeldungen.csv", "text/csv")
+            
+            data = worksheet.get_all_records(head=1)
+            
+            if data:
+                df_anzeige = pd.DataFrame(data)
+                st.write(f"Anzahl Anmeldungen: {len(df_anzeige)}")
+                st.dataframe(df_anzeige)
+                
+                # Excel-Datei im Speicher erstellen
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    df_anzeige.to_excel(writer, index=False, sheet_name='Anmeldungen')
+                excel_data = output.getvalue()
+                
+                # Excel-Download-Button
+                st.download_button(
+                    label="📥 Alle Anmeldungen als Excel herunterladen",
+                    data=excel_data,
+                    file_name="alle_anmeldungen.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.info("Das Sheet ist aktuell leer.")
         except Exception as e:
             st.error(f"Fehler beim Laden der Admin-Daten: {e}")
