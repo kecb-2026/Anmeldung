@@ -199,7 +199,7 @@ def sende_bestaetigungs_email(daten):
 
 
 
-st.title("🐾 Anmeldung zur Katzenausstellung")
+st.title("🐾 Anmeldung zur Katzenausstellung" Burgdorf 2026)
 st.markdown("### Fédération Féline Helvétique (FFH) / FIFe")
 
 # --- 1. AUSSTELLUNGSDETAILS ---
@@ -210,7 +210,7 @@ ausstellungsort = st.text_input("Ausstellung in *", value="Burgdorf")
 col_sat_chk, col_sat_date = st.columns([1, 2])
 with col_sat_chk:
     st.write(""); st.write("")
-    samstag_aktiv = st.checkbox("Samstag", value=True)
+    samstag_aktiv = st.checkbox("Samstag", value=False)
 with col_sat_date:
     datum_samstag = st.date_input("Ausstellungstermin Samstag", value=date(2026, 10, 10), format="DD.MM.YYYY", disabled=not samstag_aktiv)
 
@@ -233,14 +233,14 @@ st.subheader("2. Angaben zur Katze")
 df_stamm, gefundener_dateiname = lade_stammdaten()
 
 if df_stamm is not None:
-    st.markdown("🔐 **Eintrag aus Vereinsdatenbank laden (Sichere Suche)**")
+    st.markdown("🔐 **Eintrag aus Datenbank laden (Sichere Suche)**")
     st.info("Geben Sie Stammbuch-Nummer UND Nachname des Besitzers ein und klicken Sie auf 'Daten suchen'.")
     
     col_search_nr, col_search_name = st.columns(2)
     with col_search_nr:
-        suche_zuchtbuch = st.text_input("Stammbuch-Nummer:", placeholder="z.B. 111951")
+        suche_zuchtbuch = st.text_input("Stammbuch-Nummer:", placeholder="z.B. 123456")
     with col_search_name:
-        suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Ammann")
+        suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Müller")
         
 
     if st.button("🔍 Daten suchen"):
@@ -335,7 +335,7 @@ katze_ems = col4.text_input("EMS-Code *", value=st.session_state.k_ems, placehol
 
 col5, col6 = st.columns([1, 2])
 katze_gruppe = col5.text_input("Gruppe / Farbgruppe", value=st.session_state.k_gruppe)
-katze_rasse_farbe = col6.text_input("Rasse + Farbe *", value=st.session_state.k_rasse, placeholder="z.B. Norwegische Waldkatze")
+katze_rasse_farbe = col6.text_input("Rasse + Farbe *", value=st.session_state.k_rasse, placeholder="z.B. Ragdoll")
 
 col7, col8 = st.columns(2)
 katze_zuchtbuch = col7.text_input("Zuchtbuch-Nr. / Pedigree-No. *", value=st.session_state.k_zuchtbuch)
@@ -394,7 +394,7 @@ st.subheader("4. Aussteller & Züchter")
 
 if not st.session_state.a_strasse:
     st.markdown("🔍 **Schnell-Eingabe der Adresse**")
-    suchanfrage = st.text_input("Suchen Sie nach Ihrer Strasse, PLZ oder Ort...", placeholder="z.B. Schulhausstrasse 22 Moosseedorf")
+    suchanfrage = st.text_input("Suchen Sie nach Ihrer Strasse, PLZ oder Ort...", placeholder="z.B. Musterweg 7 Zürich")
     if len(suchanfrage) >= 4:
         ergebnisse = suche_adresse(suchanfrage)
         if ergebnisse:
