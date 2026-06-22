@@ -1,4 +1,3 @@
-```python
 # -*- coding: utf-8 -*-
 
 """
@@ -517,4 +516,3 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
 
-```
