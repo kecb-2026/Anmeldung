@@ -355,17 +355,32 @@ with col10:
 with col11:
     kast_index = 0 if st.session_state.k_kastriert == "Ja" else 1
     katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"], index=kast_index)
+from dateutil.relativedelta import relativedelta
 
-# Dynamische Klassenfilterung mit "-" als standardmäßigen Platzhalter
+# --- 1. ALTERS-LOGIK & BEMERKUNG ---
+automatische_bemerkung = ""
+if samstag_aktiv and sonntag_aktiv:
+    alter_sa = relativedelta(datum_samstag, katze_geboren)
+    alter_so = relativedelta(datum_sonntag, katze_geboren)
+    monate_sa = alter_sa.years * 12 + alter_sa.months
+    monate_so = alter_so.years * 12 + alter_so.months
+    
+    if (monate_sa < 8 and monate_so >= 8) or (monate_sa < 12 and monate_so >= 12):
+        st.warning(f"⚠️ **Hinweis:** Deine Katze überschreitet am Sonntag die Altersgrenze. Meldung in der Klasse für Samstag ist korrekt, bitte beachte die notwendige Ummeldung für den Sonntag beim Sekretariat.")
+        automatische_bemerkung = "Hinweis: Katze erreicht am Sonntag das nächste Alterslimit (Ummeldung für So. erforderlich)."
+
+# --- 2. KLASSEN-LISTE (NUR EINMAL DEFINIEREN) ---
 gemeinsame_klassen = ["11. Klasse 8-12 Monate", "12. Klasse 4-8 Monate", "13a. Novizenklasse", "13b. Kontrollklasse", "13c. Bestimmungsklasse", "14. Hauskatze", "15. Ausser Konkurrenz"]
+
 if katze_kastriert == "Ja":
     klassen_optionen = ["-", "2. Supreme Premior - PH", "4. Gr. Int. Premior - CAPS", "6. International Premior - CAGPIB", "8. Premior - CAPIB", "10. Kastraten (Neuter) - CAP"] + gemeinsame_klassen
 else:
     klassen_optionen = ["-", "1. Supreme Champion - PH", "3. Gr. Int. Champion - CACS", "5. International Champion - CAGCIB", "7. Champion - CACIB", "9. Offene Klasse (Open) - CAC"] + gemeinsame_klassen
 
+# --- 3. SELECTBOX ---
 ausstellungsklasse = st.selectbox("Klasse für die gemeldet wird *", klassen_optionen)
 katze_gewicht = st.text_input("Gewicht der Katze (kg)", placeholder="z.B. 4.5")
-# bereits_erhalten = st.text_input("Bereits erhalten in / Point obtenu à l'exposition de")
+
 
 
 # --- 3. STAMMBAUM (ELTERN) & ZÜCHTER ---
@@ -489,7 +504,10 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "MitgliedsNr": aussteller_mitgliedsnr, 
             "Zuechter": zuechter_name_land, 
             "Doppelkafig": doppelkafig, 
-            "Bemerkungen": bemerkungen
+            # "Bemerkungen": bemerkungen
+            # Suchen nach dem Dictionary 'neue_anmeldung' und diesen Eintrag ändern:
+            "Bemerkungen": f"{bemerkungen} {automatische_bemerkung}".strip(),
+
         }
         
         # ... Rest des Codes bleibt gleich
