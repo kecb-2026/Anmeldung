@@ -241,10 +241,12 @@ if df_stamm is not None:
     with col_search_name:
         suche_nachname = st.text_input("Nachname des Besitzers:", placeholder="z.B. Ammann")
         
+
     if st.button("🔍 Daten suchen"):
         if suche_zuchtbuch and suche_nachname:
             such_ziffern = extrahiere_ziffern(suche_zuchtbuch)
-            clean_nachname = str(suche_nachname).strip().lower()
+            # Wir behalten den Suchbegriff, konvertieren ihn aber für die Suche
+            such_nachname_str = str(suche_nachname).strip().lower()
             
             such_spalte_nr = 'Stammbuch-Nummer' if 'Stammbuch-Nummer' in df_stamm.columns else ('Zuchtbuch_Nr' if 'Zuchtbuch_Nr' in df_stamm.columns else None)
             such_spalte_name = 'Besitzer Nachname' if 'Besitzer Nachname' in df_stamm.columns else None
@@ -252,9 +254,11 @@ if df_stamm is not None:
             if such_spalte_nr and such_spalte_name:
                 df_stamm['Ziffern_Suche'] = df_stamm[such_spalte_nr].apply(extrahiere_ziffern)
                 
+                # DIE ÄNDERUNG HIER:
+                # Wir filtern nach der Ziffern-Übereinstimmung UND einem Teil-Match im Nachnamen
                 match = df_stamm[
                     (df_stamm['Ziffern_Suche'] == such_ziffern) & 
-                    (df_stamm[such_spalte_name].astype(str).str.strip().str.lower() == clean_nachname)
+                    (df_stamm[such_spalte_name].astype(str).str.lower().str.contains(such_nachname_str, na=False))
                 ]
                 
                 if not match.empty:
