@@ -385,7 +385,7 @@ if not st.session_state.k_zuchtbuch:
         mutter_ems = col_m2.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
         mutter_zuchtbuch = col_m3.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
         
-        zuechter_name_land = st.text_input("Züchter + Land *")
+        zuechter_name_land = st.text_input("Züchter + Land *", key="zuechter_input_1")
 else:
     # Falls Daten geladen wurden, müssen die Variablen für den Absende-Prozess trotzdem existieren
     vater_name = st.session_state.v_name
@@ -433,7 +433,7 @@ col18, col19 = st.columns([2, 1])
 aussteller_verein = col18.text_input("Mitglied bei (Katzclub/Verein) *")
 aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
 if not st.session_state.k_zuchtbuch:
-    zuechter_name_land = st.text_input("Züchter + Land *")
+    zuechter_name_land = st.text_input("Züchter + Land *", key="zuechter_input_2")
 else:
     zuechter_name_land = st.session_state.z_zuechter
 
@@ -518,4 +518,3 @@ with st.expander("🔐 Admin-Bereich (Anmeldungen herunterladen)"):
             st.dataframe(pd.read_excel(EXCEL_FILE))
         else: st.info("Keine Anmeldungen vorhanden.")
     elif admin_passwort: st.error("Ungültiges Passwort!")
-
