@@ -161,7 +161,8 @@ def sende_bestaetigungs_email(daten):
         return False
         
     kopie_verein = sender_email
-    betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} - {daten.get('Katze_Name', 'Katze')}"
+    betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
+
     
      # Erweiterter Inhalt mit allen gewünschten Feldern
     inhalt = (
@@ -169,17 +170,19 @@ def sende_bestaetigungs_email(daten):
         f"Vielen Dank für Ihre Anmeldung. Hier sind die Daten:\n\n"
         f"--- KATZENDETAILS ---\n"
         f"Name: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
+        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n\n"
         f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
         f"Geschlecht: {daten.get('Geschlecht', '')}\n"
         f"Kastriert: {daten.get('Kastrat', '')}\n"
-        f"Gewicht: {daten.get('Gewicht', '')} kg\n"
         f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
-        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n\n"
+        f"Gewicht: {daten.get('Gewicht', '')} kg\n"
+
+       
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Datum/Tage: {daten.get('Angemeldete_Tage', '')}\n"
         f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
         f"Bemerkungen: {daten.get('Bemerkungen', 'Keine')}\n\n"
-        f"Freundliche Grüsse\nIhr Ausstellungsteam"
+        f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
     )
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
