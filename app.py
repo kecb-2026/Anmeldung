@@ -146,6 +146,59 @@ def suche_adresse(query):
         print(f"Fehler: {e}")
     return []
 
+def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_aktiv):
+    if kl == "-" or kl == "15. Ausser Konkurrenz":
+        return None, ""
+
+    def get_monate(tag):
+        monate = (tag.year - geb.year) * 12 + (tag.month - geb.month)
+        if tag.day < geb.day:
+            monate -= 1
+        return monate
+
+    monate_sa = get_monate(datum_sa) if samstag_aktiv else None
+    monate_so = get_monate(datum_so) if sonntag_aktiv else None
+    
+    hinweis_umwertung = ""
+
+    # Erwachsenenklassen (1-10): Punktgenau ab dem 12. Geburtstag (12 Monate)
+    erwachsenen_klassen = ["1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "9.", "10."]
+    if any(kl.startswith(prefix) for prefix in erwachsenen_klassen):
+        if samstag_aktiv and monate_sa < 12:
+            return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
+        if sonntag_aktiv and monate_so < 12:
+            return f"Die Katze ist am Sonntag erst {monate_so} Monate alt. In die Erwachsenenklassen (1-10) darf sie erst ab exakt 12 Monaten gemeldet werden.", ""
+
+    # Klasse 11 (Jugendklasse 8-12 Monate)
+    if "11." in kl:
+        if samstag_aktiv and monate_sa < 8:
+            return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 11 ist 8 Monate.", ""
+        if samstag_aktiv and monate_sa >= 12:
+            return f"Die Katze ist am Samstag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+        
+        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
+        if samstag_aktiv and sonntag_aktiv and monate_sa == 11 and monate_so >= 12:
+            hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 12. Lebensmonat und MUSS für den Sonntag in die Erwachsenenklasse (Klasse 9) umgewertet werden!"
+
+        if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
+            return f"Die Katze ist am Sonntag bereits 12 Monate alt. Sie muss in eine Erwachsenenklasse gemeldet werden.", ""
+
+    # Klasse 12 (Kittenklasse 4-8 Monate)
+    if "12." in kl:
+        if samstag_aktiv and monate_sa < 4:
+            return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
+        if samstag_aktiv and monate_sa >= 8:
+            return f"Die Katze ist am Samstag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+        
+        # Weiche für Geburtstag am Sonntag während des Ausstellungswochenendes
+        if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
+            hinweis_umwertung = "HINWEIS: Katze vollendet am Sonntag das 8. Lebensmonat und MUSS für den Sonntag in die Klasse 11 umgewertet werden!"
+
+        if sonntag_aktiv and not samstag_aktiv and monate_so >= 8:
+            return f"Die Katze ist am Sonntag bereits 8 Monate alt. Sie muss in die Klasse 11 gemeldet werden.", ""
+
+    return None, hinweis_umwertung
+
 def sende_bestaetigungs_email(daten):
     try:
         smtp_server = st.secrets["smtp"]["server"]
@@ -164,19 +217,21 @@ def sende_bestaetigungs_email(daten):
     
     inhalt = (
         f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
-        f"Vielen Dank für Ihre Anmeldung. Hier sind die Daten:\n\n"
+        f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
         f"--- KATZENDETAILS ---\n"
         f"Name: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
-        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n\n"
+        f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n"
         f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
         f"Geschlecht: {daten.get('Geschlecht', '')}\n"
         f"Kastriert: {daten.get('Kastrat', '')}\n"
         f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
-        f"Gewicht: {daten.get('Gewicht', '')} kg\n"
+        f"Gewicht: {daten.get('Gewicht', '')} kg\n\n"
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Datum/Tage: {daten.get('Angemeldete_Tage', '')}\n"
-        f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
-        f"Bemerkungen: {daten.get('Bemerkungen', 'Keine')}\n\n"
+        f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n\n"
+        f"--- WICHTIGE HINWEISE & BEMERKUNGEN ---\n"
+        f"Umgruppierung: {daten.get('Hinweis_Umwertung', 'Keine automatische Umwertung nötig.')}\n"
+        f"Deine Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
         f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
     )
     try:
@@ -360,31 +415,20 @@ else:
 
 ausstellungsklasse = st.selectbox("Klasse für die gemeldet wird *", klassen_optionen)
 
-# --- ALTERS-WARNUNG (NICHT BLOCKIEREND) ---
-def pruefe_alter_warnung(geb, kl, tag):
-    if kl == "-" or kl == "15. Ausser Konkurrenz":
-        return None
-    monate = relativedelta(tag, geb).years * 12 + relativedelta(tag, geb).months
-    # Prüfung: 11. Klasse (8-12 Monate)
-    if "11." in kl and not (8 <= monate <= 12):
-        return f"Die Katze ist am {tag.strftime('%d.%m.%Y')} ({monate} Monate alt) nicht in der Altersspanne für die 11. Klasse (8-12 Monate)."
-    # Prüfung: 12. Klasse (4-8 Monate)
-    if "12." in kl and not (4 <= monate < 8):
-        return f"Die Katze ist am {tag.strftime('%d.%m.%Y')} ({monate} Monate alt) nicht in der Altersspanne für die 12. Klasse (4-8 Monate)."
-    return None
+# --- ALTERS-WARNUNG & AUTOMATISCHE UMWERTUNGS-PRÜFUNG ---
+warnung_text, hinweis_umwertung = pruefe_alter_warnung(
+    katze_geboren,
+    ausstellungsklasse,
+    datum_samstag,
+    datum_sonntag,
+    samstag_aktiv,
+    sonntag_aktiv
+)
 
-warnungen = []
-if samstag_aktiv:
-    w = pruefe_alter_warnung(katze_geboren, ausstellungsklasse, datum_samstag)
-    if w:
-        warnungen.append(w)
-if sonntag_aktiv:
-    w = pruefe_alter_warnung(katze_geboren, ausstellungsklasse, datum_sonntag)
-    if w:
-        warnungen.append(w)
-
-for w in warnungen:
-    st.warning(f"⚠️ Warnung: {w}")
+if warnung_text:
+    st.error(f"❌ {warnung_text}")
+if hinweis_umwertung:
+    st.warning(f"⚠️ {hinweis_umwertung}")
 
 katze_gewicht = st.text_input("Gewicht der Katze (kg)")
 
@@ -448,6 +492,8 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
     elif ausstellungsklasse == "-":
         st.error("Bitte wählen Sie eine Ausstellungsklasse!")
+    elif warnung_text:
+        st.error(f"Absenden blockiert aufgrund eines schweren Altersfehlers: {warnung_text}")
     else:
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
@@ -481,13 +527,14 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "MitgliedsNr": aussteller_mitgliedsnr,
             "Zuechter": zuechter_name_land,
             "Doppelkafig": doppelkafig,
-            "Bemerkungen": bemerkungen
+            "Hinweis_Umwertung": hinweis_umwertung if hinweis_umwertung else "Keine automatische Umwertung nötig.",
+            "Bemerkungen": bemerkungen if bemerkungen else "Keine"
         }
         df_neu = pd.DataFrame([neue_anmeldung])
         if os.path.exists(EXCEL_FILE):
             df_gesamt = pd.concat([pd.read_excel(EXCEL_FILE), df_neu], ignore_index=True)
         else:
-            df_neu
+            df_gesamt = df_neu
         df_gesamt.to_excel(EXCEL_FILE, index=False)
         sende_bestaetigungs_email(neue_anmeldung)
         st.success("Erfolgreich!")
