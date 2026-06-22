@@ -199,7 +199,7 @@ def sende_bestaetigungs_email(daten):
 
 
 
-st.title("🐾 Anmeldung zur Katzenausstellung" Burgdorf 2026)
+st.title("🐾 Anmeldung zur Katzenausstellung Burgdorf 2026")
 st.markdown("### Fédération Féline Helvétique (FFH) / FIFe")
 
 # --- 1. AUSSTELLUNGSDETAILS ---
