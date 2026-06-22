@@ -6,6 +6,8 @@ Copyright (c) 2026 Brigitte Portner
 Alle Rechte vorbehalten
 """
 
+
+
 import streamlit as st
 import pandas as pd
 import os
