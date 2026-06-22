@@ -562,3 +562,5 @@ with st.expander("🔐 Admin-Bereich"):
             with open(EXCEL_FILE, "rb") as f:
                 st.download_button("📥 Excel herunterladen", f.read(), "ausstellung_anmeldungen.xlsx")
             st.dataframe(pd.read_excel(EXCEL_FILE))
+        else:
+            st.info("ℹ️ Bisher sind noch keine Anmeldungen eingegangen. Die Excel-Datei wird automatisch beim ersten Absenden erstellt.")
