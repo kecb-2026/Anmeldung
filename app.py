@@ -201,15 +201,18 @@ def pruefe_alter_warnung(geb, kl, datum_sa, datum_so, samstag_aktiv, sonntag_akt
         if sonntag_aktiv and not samstag_aktiv and monate_so >= 12:
             return f"Die Katze ist am Sonntag bereits {monate_so} Monate alt. Sie muss in eine der Klassen (1-10) gemeldet werden.", ""
 
-    # Klasse 12 (Kittenklasse 4-8 Monate)
-    if "12." in kl:
-        if samstag_aktiv and monate_sa < 4:
+        # Klasse 12 (Kittenklasse 4-8 Monate)
+    if "12." in kl and samstag_aktiv:
+        if monate_sa < 4:
             return f"Die Katze ist am Samstag erst {monate_sa} Monate alt. Mindestalter für Klasse 12 ist 4 Monate.", ""
-        if samstag_aktiv and monate_sa >= 8:
-            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für Klasse 12 und muss in Klasse 11 gemeldet werden.", ""
-        if samstag_aktiv and monate_sa >= 12:
-            return f"Die Katze ist am Samstag bereits {monate_sa} Monate alt. Sie ist zu alt für Klasse 12 und muss in der offenen Klasse (CAC oddr CAP) gemeldet werden.", ""
-        
+        elif monate_sa >= 4 and monate_sa < 8:
+        # Alles in Ordnung
+            return None, "OK"
+        elif monate_sa >= 8 and monate_sa < 12:
+            return f"Die Katze ist am Samstag {monate_sa} Monate alt. Sie muss in Klasse 11 gemeldet werden.", ""
+        else: # monate_sa >= 12
+            return f"Die Katze ist am Samstag {monate_sa} Monate alt. Sie muss in der offenen Klasse (CAC oder CAP) gemeldet werden.", ""
+
         
         # Fall 1: Katze wechselt von 12 zu 11 am Sonntag
         if samstag_aktiv and sonntag_aktiv and monate_sa == 7 and monate_so >= 8:
