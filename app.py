@@ -447,13 +447,20 @@ agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akz
 
 # --- ABSENDEN LOGIK ---
 if st.button("Anmeldung verbindlich absenden", type="primary"):
-    if not (ausstellungsort and katze_name and aussteller_nachname and aussteller_email and agb_akzeptiert):
-        st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
+    if not (ausstellungsort and katze_name and katze_ems and katze_rasse_farbe and katze_zuchtbuch and 
+            aussteller_nachname and aussteller_vorname and aussteller_strasse and aussteller_ort and 
+            aussteller_land and aussteller_telefon and aussteller_email and aussteller_verein and 
+            zuechter_name_land and agb_akzeptiert):
+        st.error(":red[Bitte füllen Sie alle mit * gekennzeichneten Pflichtfelder aus!]")
+    
     elif ausstellungsklasse == "-":
         # Blockiert das Absenden, wenn die Klasse nicht gewählt wurde
-        st.error("Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!")
+        st.error(":red[Bitte wählen Sie eine Ausstellungsklasse für Ihre Katze aus!]")
+        
     elif not (samstag_aktiv or sonntag_aktiv):
-        st.error("Bitte wählen Sie mindestens einen Ausstellungstag aus.")
+        # Blockiert das Absenden, wenn kein Tag gewählt wurde
+        st.error(":red[Bitte wählen Sie mindestens einen Ausstellungstag aus.]")
+
 
     else:
         neue_anmeldung = {
