@@ -25,7 +25,15 @@ def save_to_google_sheet(neue_anmeldung):
     gc = gspread.service_account_from_dict(creds_dict)
     sh = gc.open("ausstellung_anmeldungen")
     worksheet = sh.sheet1
+    
+    # Prüfen, ob das Sheet leer ist, um die Spaltennamen zu setzen
+    if not worksheet.get_values("A1:F1"):
+        header = list(neue_anmeldung.keys())
+        worksheet.append_row(header)
+    
+    # Daten in der gleichen Reihenfolge wie die Keys einfügen
     worksheet.append_row(list(neue_anmeldung.values()))
+
 
 # Dateiname für das Speichern der Anmeldungen
 EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
