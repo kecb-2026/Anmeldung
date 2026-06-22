@@ -16,6 +16,16 @@ from email.mime.text import MIMEText
 from email.header import Header
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
+import gspread
+import json
+
+# --- GOOGLE SHEETS INTEGRATION ---
+def save_to_google_sheet(neue_anmeldung):
+    creds_dict = json.loads(st.secrets["gcp"]["json_key"])
+    gc = gspread.service_account_from_dict(creds_dict)
+    sh = gc.open("ausstellung_anmeldungen")
+    worksheet = sh.sheet1
+    worksheet.append_row(list(neue_anmeldung.values()))
 
 # Dateiname für das Speichern der Anmeldungen
 EXCEL_FILE = "ausstellung_anmeldungen.xlsx"
@@ -537,20 +547,27 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
             "Bemerkungen": bemerkungen if bemerkungen else "Keine"
         }
-        df_neu = pd.DataFrame([neue_anmeldung])
-        if os.path.exists(EXCEL_FILE):
-            df_gesamt = pd.concat([pd.read_excel(EXCEL_FILE), df_neu], ignore_index=True)
-        else:
-            df_gesamt = df_neu
-        df_gesamt.to_excel(EXCEL_FILE, index=False)
-        sende_bestaetigungs_email(neue_anmeldung)
-        st.success("Besten Dank für Ihre Anmeldung!")
-        st.balloons()
+        try:
+            save_to_google_sheet(neue_anmeldung)
+            sende_bestaetigungs_email(neue_anmeldung)
+            st.success("Besten Dank für Ihre Anmeldung!")
+            st.balloons()
+        except Exception as e:
+            st.error(f"Fehler beim Übermitteln der Anmeldung: {e}")
 
 # --- ADMIN ---
 with st.expander("🔐 Admin-Bereich"):
     if st.text_input("Passwort", type="password") == "ffh2026":
-        if os.path.exists(EXCEL_FILE):
-            with open(EXCEL_FILE, "rb") as f:
-                st.download_button("📥 Excel herunterladen", f.read(), "ausstellung_anmeldungen.xlsx")
-            st.dataframe(pd.read_excel(EXCEL_FILE))
+        try:
+            creds_dict = json.loads(st.secrets["gcp"]["json_key"])
+            gc = gspread.service_account_from_dict(creds_dict)
+            sh = gc.open("ausstellung_anmeldungen")
+            worksheet = sh.sheet1
+            data = worksheet.get_all_records()
+            df_anzeige = pd.DataFrame(data)
+            st.write(f"Anzahl Anmeldungen: {len(df_anzeige)}")
+            st.dataframe(df_anzeige)
+            csv = df_anzeige.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Alle Anmeldungen als CSV herunterladen", csv, "alle_anmeldungen.csv", "text/csv")
+        except Exception as e:
+            st.error(f"Fehler beim Laden der Admin-Daten: {e}")
