@@ -19,6 +19,18 @@ from dateutil.relativedelta import relativedelta
 import gspread
 import json
 
+# =====================================================================
+# --- VEREINS-DATENBANK (HIER PLATZIEREN) ---
+# =====================================================================
+VEREINS_EMAILS = {
+    "Katzen- und Edelkatzen Club Bern (KECB)": "werbung@kecb.ch",
+    "Katzenclub Züri-Leu (KZL)": "info@catalicious.ch",
+    "Katzenclub Aargau Solothurn (KAS)": "portner@me.com",
+    "Katzenclub beider Basel (KCBB)": "werbung@kecb.ch",
+    "Anderer Verein (nicht gelistet)": "andere"
+}
+
+
 # --- GOOGLE SHEETS INTEGRATION ---
 def save_to_google_sheet(neue_anmeldung):
     creds_dict = json.loads(st.secrets["gcp"]["json_key"])
