@@ -248,10 +248,11 @@ def sende_bestaetigungs_email(daten):
     empfaenger = daten.get("Email")
     if not empfaenger:
         return False
+        
     kopie_verein = sender_email
     betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
     
-        # --- Empfänger-Liste für CC vorbereiten ---
+    # --- Empfänger-Liste für CC vorbereiten ---
     cc_empfaenger = [kopie_verein]
     vereins_mail = daten.get("Vereins_Email")
     
@@ -259,18 +260,20 @@ def sende_bestaetigungs_email(daten):
     if vereins_mail and vereins_mail != "andere":
         cc_empfaenger.append(vereins_mail)
     
-    # Hier werden nun lückenlos ALLE Felder abgebildet
+    # --- Mailtext lückenlos zusammenbauen ---
     inhalt = (
         f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
         f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
     )
-
-
-        # HINWEIS ZUR VEREINSBESTÄTIGUNG GANZ OBEN PLATZIEREN
+    
+    # Hinweis zur Vereinsbestätigung ganz oben platzieren
     if vereins_mail == "andere":
         inhalt += "⚠️ WICHTIGER HINWEIS:\nDa Ihr Verein nicht direkt im System hinterlegt ist, vergessen Sie bitte nicht, die offizielle Bestätigung Ihres Vereins selbstständig einzuholen und an uns weiterzuleiten!\n\n"
     elif vereins_mail:
         inhalt += f"ℹ️ HINWEIS:\nEine Kopie dieser Anmeldung wurde automatisch zur Bestätigung an Ihren Verein ({daten.get('Verein', '')}) an die Adresse {vereins_mail} gesendet.\n\n"
+
+    # Jetzt werden lückenlos ALLE Daten an den Text angehängt:
+    inhalt += (
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
         f"Angemeldete Tage: {daten.get('Angemeldete_Tage', '')}\n\n"
@@ -304,15 +307,15 @@ def sende_bestaetigungs_email(daten):
         
         f"--- BEMERKUNGEN & WEITERES ---\n"
         f"Doppelkäfig zusammen mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
-    
+    )
 
     # Wichtige Alters-Warnungen/Ummeldungen (falls vorhanden) anhängen
     hinweis = daten.get('Hinweis_Ummeldung', '')
     if hinweis:
-        inhalt += f"\n--- WICHTIGE HINWEISE ---\n{hinweis}\n"
+        inhalt += f"Hinweis Klassenwechsel: {hinweis}\n"
     
     inhalt += (
-        f"\nIhre Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
+        f"Ihre Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
         f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
     )
     
@@ -321,8 +324,6 @@ def sende_bestaetigungs_email(daten):
         msg['Subject'] = Header(betreff, 'utf-8')
         msg['From'] = sender_email
         msg['To'] = empfaenger
-        msg['Cc'] = kopie_verein
-        # CC-Header für die Anzeige in der E-Mail setzen
         msg['Cc'] = ", ".join(cc_empfaenger)
         
         server = smtplib.SMTP_SSL(smtp_server, smtp_port) if smtp_port == 465 else smtplib.SMTP(smtp_server, smtp_port)
