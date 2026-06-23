@@ -251,11 +251,26 @@ def sende_bestaetigungs_email(daten):
     kopie_verein = sender_email
     betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
     
+        # --- Empfänger-Liste für CC vorbereiten ---
+    cc_empfaenger = [kopie_verein]
+    vereins_mail = daten.get("Vereins_Email")
+    
+    # Wenn ein bekannter Verein gewählt wurde, diese Mail ins CC packen
+    if vereins_mail and vereins_mail != "andere":
+        cc_empfaenger.append(vereins_mail)
+    
     # Hier werden nun lückenlos ALLE Felder abgebildet
     inhalt = (
         f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
         f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
-        
+    )
+
+
+        # HINWEIS ZUR VEREINSBESTÄTIGUNG GANZ OBEN PLATZIEREN
+    if vereins_mail == "andere":
+        inhalt += "⚠️ WICHTIGER HINWEIS:\nDa Ihr Verein nicht direkt im System hinterlegt ist, vergessen Sie bitte nicht, die offizielle Bestätigung Ihres Vereins selbstständig einzuholen und an uns weiterzuleiten!\n\n"
+    elif vereins_mail:
+        inhalt += f"ℹ️ HINWEIS:\nEine Kopie dieser Anmeldung wurde automatisch zur Bestätigung an Ihren Verein ({daten.get('Verein', '')}) an die Adresse {vereins_mail} gesendet.\n\n"
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
         f"Angemeldete Tage: {daten.get('Angemeldete_Tage', '')}\n\n"
@@ -307,17 +322,23 @@ def sende_bestaetigungs_email(daten):
         msg['From'] = sender_email
         msg['To'] = empfaenger
         msg['Cc'] = kopie_verein
+        # CC-Header für die Anzeige in der E-Mail setzen
+        msg['Cc'] = ", ".join(cc_empfaenger)
         
         server = smtplib.SMTP_SSL(smtp_server, smtp_port) if smtp_port == 465 else smtplib.SMTP(smtp_server, smtp_port)
         if smtp_port != 465:
             server.starttls()
         server.login(smtp_user, smtp_password)
-        server.sendmail(sender_email, [empfaenger, kopie_verein], msg.as_string())
+        
+        # Wichtig: sendmail benötigt alle Empfänger (To + alle CCs) als flache Liste
+        alle_empfaenger = [empfaenger] + cc_empfaenger
+        server.sendmail(sender_email, alle_empfaenger, msg.as_string())
         server.quit()
         return True
     except Exception as e:
         st.error(f"Fehler beim E-Mail-Versand: {e}")
         return False
+
 
 
 st.title("🐾 Anmeldung zur Katzenausstellung Burgdorf 2026")
@@ -546,8 +567,28 @@ aussteller_land = col16.text_input("Land *", value=st.session_state.a_land)
 aussteller_telefon = col17.text_input("Telefon *")
 aussteller_email = st.text_input("E-Mail-Adresse *")
 col18, col19 = st.columns([2, 1])
-aussteller_verein = col18.text_input("Verein *")
+# --- Aussteller Verein Dropdown ---
+vereins_optionen = list(VEREINS_EMAILS.keys())
+gewaehlter_verein = col18.selectbox("Verein *", ["-- Bitte wählen --"] + vereins_optionen)
+
+aussteller_verein = ""
+vereins_email_export = ""
+
+if gewaehlter_verein != "-- Bitte wählen --":
+    vereins_email_export = VEREINS_EMAILS[gewaehlter_verein]
+    
+    if vereins_email_export == "andere":
+        # Wenn "Anderer Verein" gewählt wurde, Freitextfeld einblenden
+        aussteller_verein = st.text_input("Bitte Vereinsnamen eingeben *")
+        st.warning("⚠️ **Hinweis:** Bitte vergessen Sie nicht, die Bestätigung Ihres Vereins eigenständig einzuholen!")
+    else:
+        aussteller_verein = gewaehlter_verein
+        st.info(f"📧 Eine Kopie wird automatisch an **{vereins_email_export}** gesendet.")
+
 aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
+
+#aussteller_verein = col18.text_input("Verein *")
+#aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
 
 # --- BEMERKUNGEN & ABSENDEN ---
 st.subheader("5. Bemerkungen & Einverständnis")
