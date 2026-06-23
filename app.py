@@ -239,29 +239,53 @@ def sende_bestaetigungs_email(daten):
     kopie_verein = sender_email
     betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
     
+    # Hier werden nun lückenlos ALLE Felder abgebildet
     inhalt = (
         f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
         f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
+        
+        f"--- AUSSTELLUNGSDETAILS ---\n"
+        f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
+        f"Angemeldete Tage: {daten.get('Angemeldete_Tage', '')}\n\n"
+        
         f"--- KATZENDETAILS ---\n"
-        f"Name: {daten.get('Katze_Name', '')} ({daten.get('Katze_EMS', '')})\n"
+        f"Name: {daten.get('Katze_Name', '')}\n"
+        f"EMS-Code: {daten.get('Katze_EMS', '')}\n"
+        f"Farbgruppe: {daten.get('Gruppe', '')}\n"
+        f"Rasse & Farbe: {daten.get('Rasse_Farbe', '')}\n"
         f"Zuchtbuch-Nr: {daten.get('Zuchtbuch_Nr', '')}\n"
+        f"Chip-Nr: {daten.get('Chip_Nr', '')}\n"
         f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
         f"Geschlecht: {daten.get('Geschlecht', '')}\n"
         f"Kastriert: {daten.get('Kastrat', '')}\n"
         f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
-        f"Gewicht: {daten.get('Gewicht', '')} kg\n\n"
-        f"--- AUSSTELLUNGSDETAILS ---\n"
-        f"Datum/Tage: {daten.get('Angemeldete_Tage', '')}\n"
-        f"Doppelkäfig mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n\n"
+        f"Gewicht: {daten.get('Gewicht', '-')} kg\n\n"
+        
+        f"--- STAMMBAUM (ELTERN) ---\n"
+        f"Vater: {daten.get('Vater_Name', '')} ({daten.get('Vater_EMS', '')})\n"
+        f"Zuchtbuch-Nr Vater: {daten.get('Vater_Zuchtbuch', '')}\n"
+        f"Mutter: {daten.get('Mutter_Name', '')} ({daten.get('Mutter_EMS', '')})\n"
+        f"Zuchtbuch-Nr Mutter: {daten.get('Mutter_Zuchtbuch', '')}\n"
+        f"Züchter & Land: {daten.get('Zuechter', '')}\n\n"
+        
+        f"--- AUSSTELLER ---\n"
+        f"Name: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n"
+        f"Adresse: {daten.get('Strasse', '')}, {daten.get('PLZ_Ort', '')} ({daten.get('Land', '')})\n"
+        f"Telefon: {daten.get('Telefon', '')}\n"
+        f"E-Mail: {daten.get('Email', '')}\n"
+        f"Verein: {daten.get('Verein', '')} (Mitglieds-Nr: {daten.get('MitgliedsNr', '-')})\n\n"
+        
+        f"--- BEMERKUNGEN & WEITERES ---\n"
+        f"Doppelkäfig zusammen mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
     )
 
-    # Hier nur einfügen, wenn ein Hinweis existiert
+    # Wichtige Alters-Warnungen/Ummeldungen (falls vorhanden) anhängen
     hinweis = daten.get('Hinweis_Ummeldung', '')
     if hinweis:
-        inhalt += f"--- WICHTIGE HINWEISE ---\n{hinweis}\n\n"
+        inhalt += f"\n--- WICHTIGE HINWEISE ---\n{hinweis}\n"
     
     inhalt += (
-        f"Deine Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
+        f"\nIhre Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
         f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
     )
     
@@ -282,6 +306,7 @@ def sende_bestaetigungs_email(daten):
     except Exception as e:
         st.error(f"Fehler beim E-Mail-Versand: {e}")
         return False
+
 
 st.title("🐾 Anmeldung zur Katzenausstellung Burgdorf 2026")
 st.markdown("### Fédération Féline Helvétique (FFH) / FIFe")
