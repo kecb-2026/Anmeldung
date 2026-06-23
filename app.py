@@ -304,7 +304,7 @@ def sende_bestaetigungs_email(daten):
         
         f"--- BEMERKUNGEN & WEITERES ---\n"
         f"Doppelkäfig zusammen mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
-    )
+    
 
     # Wichtige Alters-Warnungen/Ummeldungen (falls vorhanden) anhängen
     hinweis = daten.get('Hinweis_Ummeldung', '')
