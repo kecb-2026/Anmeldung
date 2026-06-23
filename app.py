@@ -249,23 +249,25 @@ def sende_bestaetigungs_email(daten):
     if not empfaenger:
         return False
         
-    # Deine originale Kopie-Logik (Burgdorf)
-    kopie_verein = sender_email 
     betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
     
-    # Technische Empfängerliste für den Server vorbereiten (wie in deinem Original)
-    sende_an_liste = [empfaenger, kopie_verein]
-    
-    # Sichtbare CC-Anzeige im Mail-Header
-    cc_anzeige_liste = [kopie_verein]
-    
-    # Vereins-E-Mail aus den Daten holen
+    # Adressen sauber vorbereiten
+    mail_aussteller = empfaenger.strip()
+    mail_burgdorf = sender_email.strip() # portner@eids.ch
     vereins_mail = daten.get("Vereins_Email")
     
-    # Wenn ein echter Verein gewählt wurde, hängen wir ihn an beide Listen an
+    # Technische Empfängerliste für server.sendmail
+    sende_an_liste = [mail_aussteller, mail_burgdorf]
+    
+    # Sichtbare CC-Zeile für das Mail-Programm
+    cc_anzeige_liste = [mail_burgdorf]
+    
     if vereins_mail and vereins_mail != "andere":
-        sende_an_liste.append(vereins_mail)
-        cc_anzeige_liste.append(vereins_mail)
+        sende_an_liste.append(vereins_mail.strip())
+        cc_anzeige_liste.append(vereins_mail.strip())
+        
+    # Duplikate für den Server-Befehl entfernen
+    sende_an_liste = list(set(sende_an_liste))
     
     # --- MAILTEXT ZUSAMMENBAUEN ---
     inhalt = (
@@ -273,13 +275,11 @@ def sende_bestaetigungs_email(daten):
         f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
     )
     
-    # Hinweis zur Vereinsbestätigung ganz oben platzieren
     if vereins_mail == "andere":
         inhalt += "⚠️ WICHTIGER HINWEIS:\nDa Ihr Verein nicht direkt im System hinterlegt ist, vergessen Sie bitte nicht, die offizielle Bestätigung Ihres Vereins selbstständig einzuholen und an uns weiterzuleiten!\n\n"
     elif vereins_mail:
         inhalt += f"ℹ️ HINWEIS:\nEine Kopie dieser Anmeldung wurde automatisch zur Bestätigung an Ihren Verein ({daten.get('Verein', '')}) an die Adresse {vereins_mail} gesendet.\n\n"
 
-    # Alle Anmeldedaten anhängen
     inhalt += (
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
@@ -328,18 +328,20 @@ def sende_bestaetigungs_email(daten):
     try:
         msg = MIMEText(inhalt, 'plain', 'utf-8')
         msg['Subject'] = Header(betreff, 'utf-8')
-        msg['From'] = sender_email
-        msg['To'] = empfaenger
-        # Setzt die CC-Zeile für die Anzeige im E-Mail-Programm
+        
+        # 🟢 HIER IST DIE ENTSCHEIDENDE ÄNDERUNG:
+        # Wir maskieren den Absender sauber, damit die Mail-Server sie nicht blockieren
+        msg['From'] = f"KECB Online-Anmeldung <{mail_burgdorf}>"
+        msg['To'] = mail_aussteller
         msg['Cc'] = ", ".join(cc_anzeige_liste)
+        msg['Reply-To'] = mail_burgdorf # Wenn jemand auf "Antworten" klickt, geht es an dich
         
         server = smtplib.SMTP_SSL(smtp_server, smtp_port) if smtp_port == 465 else smtplib.SMTP(smtp_server, smtp_port)
         if smtp_port != 465:
             server.starttls()
         server.login(smtp_user, smtp_password)
         
-        # Versendet die E-Mail an alle Empfänger in der Liste (Aussteller + du + optionaler Verein)
-        server.sendmail(sender_email, sende_an_liste, msg.as_string())
+        server.sendmail(mail_burgdorf, sende_an_liste, msg.as_string())
         server.quit()
         return True
     except Exception as e:
