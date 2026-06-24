@@ -19,6 +19,17 @@ from dateutil.relativedelta import relativedelta
 import gspread
 import json
 
+# Versteckt das Menü (3 Punkte oben rechts) und die Fußzeile im normalen Modus
+st.markdown("""
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    stDecoration {display:none;}
+    </style>
+    """, unsafe_allow_html=True)
+
+
 # =====================================================================
 # --- VEREINS-DATENBANK (HIER PLATZIEREN) ---
 # =====================================================================
