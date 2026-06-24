@@ -19,13 +19,17 @@ from dateutil.relativedelta import relativedelta
 import gspread
 import json
 
-# Versteckt das Menü (3 Punkte oben rechts) und die Fußzeile im normalen Modus
+
+# Versteckt absolut alle Streamlit-Elemente (inklusive Menü, Fußzeile, Krone und Deploy-Button unten rechts)
 st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-    stDecoration {display:none;}
+    [data-testid="stDecoration"] {display: none;}
+    [data-testid="stStatusWidget"] {display: none;}
+    .stAppDeployButton {display: none !important;}
+    #stConnectionStatus {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
 
