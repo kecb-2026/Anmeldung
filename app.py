@@ -319,15 +319,15 @@ def sende_bestaetigungs_email(daten):
 
     # --- TEXT FÜR VEREIN ---
     inhalt_verein = (
-        f"Sehr geehrte Damen und Herren\n"
-        f"Sehr geehrte Vereinskollegen\n\n"
-        f"Ein Mitglied Ihres Vereins ({daten.get('Verein', '')}) hat sich soeben für unsere Ausstellung angemeldet.\n"
+        
+        f"Hallo!\n\n"
+        f"Ein Mitglied eures Vereins ({daten.get('Verein', '')}) hat sich soeben für unsere Ausstellung in Burgdorf angemeldet.\n"
         f"Wir bitten um Bestätigung der Mitgliedschaft für: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
-        f"Bitte antworten Sie einfach kurz auf diese E-Mail, um uns die Freigabe zu bestätigen.\n\n"
-        f"Nachfolgend finden Sie die vom Aussteller erfassten Daten:\n\n"
+        f"Bitte antwortet einfach kurz auf diese E-Mail, um uns die Mitgliedschaft zu bestätigen.\n\n"
+        f"Nachfolgend findet ihr die vom Aussteller erfassten Daten:\n\n"
         f"{daten_block}{hinweis_text}{bemerkungen_text}\n"
-        f"Vielen Dank für Ihre Unterstützung und sportliche Grüsse\n"
-        f"Ihr KECB-Ausstellungsteam"
+        f"Herzlichen Dank für eure Unterstützung und mit freundlichen Grüsse\n"
+        f"Euer KECB-Ausstellungsteam"
     )
 
     try:
