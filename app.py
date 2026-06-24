@@ -20,15 +20,17 @@ import gspread
 import json
 
 
-# Versteckt absolut alle Streamlit-Elemente (inklusive Menü, Fußzeile, Krone und Deploy-Button unten rechts)
+# Radikale Bereinigung: Blendet das Menü, die Fußzeile und die Symbole unten rechts restlos aus
 st.markdown("""
     <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="stDecoration"] {display: none;}
-    [data-testid="stStatusWidget"] {display: none;}
+    #MainMenu {visibility: hidden; display: none !important;}
+    footer {visibility: hidden; display: none !important;}
+    header {visibility: hidden; display: none !important;}
+    [data-testid="stDecoration"] {display: none !important;}
+    [data-testid="stStatusWidget"] {display: none !important;}
+    [data-testid="stAppDeployButton"] {display: none !important;}
     .stAppDeployButton {display: none !important;}
+    div[class^="stActionButton"] {display: none !important;}
     #stConnectionStatus {display: none !important;}
     </style>
     """, unsafe_allow_html=True)
