@@ -249,30 +249,26 @@ def sende_bestaetigungs_email(daten):
     if not empfaenger:
         return False
         
-    betreff_aussteller = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
+    betreff = f"Anmeldebestätigung: {daten.get('Ausstellungsort', 'Ausstellung')} 2026 - {daten.get('Katze_Name', 'Katze')}"
     
     mail_aussteller = empfaenger.strip()
     mail_burgdorf = sender_email.strip() # portner@eids.ch
+    
+    # --- HARDCODED SICHERUNG ---
+    # Falls das Formular die E-Mail vergessen hat zu übergeben, holen wir sie uns hier direkt!
     vereins_mail = daten.get("Vereins_Email")
-    
-    # =====================================================================
-    # 1. TEXTBLOCK FÜR DEN AUSSTELLER (Und Kopie an dich)
-    # =====================================================================
-    inhalt_aussteller = (
-        f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
-        f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
-    )
-    
-    if vereins_mail == "andere":
-        inhalt_aussteller += "⚠️ WICHTIGER HINWEIS:\nDa Ihr Verein nicht direkt im System hinterlegt ist, vergessen Sie bitte nicht, die offizielle Bestätigung Ihres Vereins selbstständig einzuholen und an uns weiterzuleiten!\n\n"
-    elif vereins_mail:
-        inhalt_aussteller += f"ℹ️ HINWEIS:\nEine Kopie dieser Anmeldung wurde automatisch zur Bestätigung an Ihren Verein ({daten.get('Verein', '')}) an die Adresse {vereins_mail} gesendet.\n\n"
+    if not vereins_mail:
+        # Falls nur der Vereinsname da ist, schauen wir im Wörterbuch nach
+        verein_name = daten.get("Verein", "")
+        # VEREINS_EMAILS ist das Wörterbuch, das ganz oben in deinem Code steht
+        if 'VEREINS_EMAILS' in globals() and verein_name in VEREINS_EMAILS:
+            vereins_mail = VEREINS_EMAILS[verein_name]
 
-    # Gemeinsamer Datenblock (Katze, Aussteller etc.)
+    # Gemeinsamer Datenblock
     daten_block = (
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
-        f"Angemeldete Tage: {daten.get('Angemeldete_Tage', '')}\n\n"
+        f"Angemeldete Tage: {daten.get('Angemeltete_Tage', '')}\n\n"
         
         f"--- KATZENDETAILS ---\n"
         f"Name: {daten.get('Katze_Name', '')}\n"
@@ -305,41 +301,35 @@ def sende_bestaetigungs_email(daten):
         f"Doppelkäfig zusammen mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
     )
     
-    inhalt_aussteller += daten_block
-    
     hinweis = daten.get('Hinweis_Ummeldung', '')
-    if hinweis:
-        inhalt_aussteller += f"Hinweis Klassenwechsel: {hinweis}\n"
-        
-    inhalt_aussteller += (
-        f"Ihre Bemerkungen: {daten.get('Bemerkungen', 'Keine Bemerkungen hinterlegt.')}\n\n"
-        f"Freundliche Grüsse\nIhr KECB-Ausstellungsteam"
+    hinweis_text = f"Hinweis Klassenwechsel: {hinweis}\n" if hinweis else ""
+    bemerkungen_text = f"Bemerkungen des Ausstellers: {daten.get('Bemerkungen', '-')}\n"
+
+    # --- TEXT FÜR AUSSTELLER ---
+    inhalt_aussteller = (
+        f"Guten Tag {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
+        f"Vielen Dank für Ihre Anmeldung. Hier sind die eingegebenen Daten:\n\n"
     )
-    
-    # =====================================================================
-    # 2. TEXTBLOCK SPEZIELL FÜR DEN VEREIN
-    # =====================================================================
+    if vereins_mail == "andere" or not vereins_mail:
+        inhalt_aussteller += "⚠️ WICHTIGER HINWEIS:\nDa Ihr Verein nicht direkt im System hinterlegt ist, vergessen Sie bitte nicht, die offizielle Bestätigung Ihres Vereins selbstständig einzuholen und an uns weiterzuleiten!\n\n"
+    else:
+        inhalt_aussteller += f"ℹ️ HINWEIS:\nEine Kopie dieser Anmeldung wurde automatisch zur Bestätigung an Ihren Verein ({daten.get('Verein', '')}) an die Adresse {vereins_mail} gesendet.\n\n"
+        
+    inhalt_aussteller += daten_block + hinweis_text + bemerkungen_text + "\nFreundliche Grüsse\nIhr KECB-Ausstellungsteam"
+
+    # --- TEXT FÜR VEREIN ---
     inhalt_verein = (
         f"Sehr geehrte Damen und Herren\n"
         f"Sehr geehrte Vereinskollegen\n\n"
-        f"Ein Mitglied Ihres Vereins hat sich soeben für unsere Ausstellung angemeldet.\n"
-        f"Wir bitten Sie hiermit höflich um die Überprüfung und Bestätigung der Mitgliedschaft.\n\n"
+        f"Ein Mitglied Ihres Vereins ({daten.get('Verein', '')}) hat sich soeben für unsere Ausstellung angemeldet.\n"
+        f"Wir bitten um Bestätigung der Mitgliedschaft für: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n\n"
         f"Bitte antworten Sie einfach kurz auf diese E-Mail, um uns die Freigabe zu bestätigen.\n\n"
         f"Nachfolgend finden Sie die vom Aussteller erfassten Daten:\n\n"
-        f"{daten_block}"
-    )
-    if hinweis:
-        inhalt_verein += f"Hinweis Klassenwechsel: {hinweis}\n"
-        
-    inhalt_verein += (
-        f"Bemerkungen des Ausstellers: {daten.get('Bemerkungen', '-')}\n\n"
+        f"{daten_block}{hinweis_text}{bemerkungen_text}\n"
         f"Vielen Dank für Ihre Unterstützung und sportliche Grüsse\n"
         f"Ihr KECB-Ausstellungsteam"
     )
 
-    # =====================================================================
-    # E-MAIL VERSAND STARTEN
-    # =====================================================================
     try:
         server = smtplib.SMTP_SSL(smtp_server, smtp_port) if smtp_port == 465 else smtplib.SMTP(smtp_server, smtp_port)
         if smtp_port != 465:
@@ -348,7 +338,7 @@ def sende_bestaetigungs_email(daten):
         
         # ✉️ MAIL 1: An den Aussteller (und dich im CC)
         msg1 = MIMEText(inhalt_aussteller, 'plain', 'utf-8')
-        msg1['Subject'] = Header(betreff_aussteller, 'utf-8')
+        msg1['Subject'] = Header(betreff, 'utf-8')
         msg1['From'] = f"KECB Online-Anmeldung <{mail_burgdorf}>"
         msg1['To'] = mail_aussteller
         msg1['Cc'] = mail_burgdorf
@@ -356,7 +346,7 @@ def sende_bestaetigungs_email(daten):
         
         server.sendmail(mail_burgdorf, [mail_aussteller, mail_burgdorf], msg1.as_string())
         
-        # ✉️ MAIL 2: Die separate, neue Anfrage direkt an den Verein
+        # ✉️ MAIL 2: An den Verein (wird separat geschickt, damit es im SMTP2GO Log auftaucht)
         if vereins_mail and vereins_mail != "andere":
             v_mail = vereins_mail.strip()
             betreff_verein = f"Bestätigung der Mitgliedschaft gefordert: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}"
@@ -365,7 +355,7 @@ def sende_bestaetigungs_email(daten):
             msg2['Subject'] = Header(betreff_verein, 'utf-8')
             msg2['From'] = f"KECB Online-Anmeldung <{mail_burgdorf}>"
             msg2['To'] = v_mail
-            msg2['Reply-To'] = mail_burgdorf # Wenn der Verein antwortet, landet es direkt bei dir!
+            msg2['Reply-To'] = mail_burgdorf
             
             server.sendmail(mail_burgdorf, [v_mail], msg2.as_string())
             
@@ -374,6 +364,7 @@ def sende_bestaetigungs_email(daten):
     except Exception as e:
         st.error(f"Fehler beim E-Mail-Versand: {e}")
         return False
+
 
 
 st.title("🐾 Anmeldung zur Katzenausstellung Burgdorf 2026")
