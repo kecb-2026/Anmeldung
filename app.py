@@ -20,6 +20,18 @@ import gspread
 import json
 
 
+
+
+# CSS zum Verstecken des Menüs und des Footers
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
 # Radikale Bereinigung: Blendet das Menü, die Fußzeile und die Symbole unten rechts restlos aus
 st.markdown("""
     <style>
