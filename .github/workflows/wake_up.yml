@@ -1,0 +1,48 @@
+name: Streamlit Dauer-Wachkanal
+
+on:
+  schedule:
+    # Läuft jede Stunde zur vollen Stunde
+    - cron: '0 * * * *'
+  workflow_dispatch: # Erlaubt manuelles Starten zum Testen
+
+jobs:
+  wake_up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright (Browser-Simulator)
+        run: npm install playwright
+
+      - name: App im echten Browser laden & wecken
+        run: |
+          node -e "
+          const { chromium } = require('playwright');
+          (async () => {
+            const browser = await chromium.launch({ headless: true });
+            const page = await browser.newPage();
+            
+            console.log('Rufe Streamlit App auf...');
+            await page.goto('https://kecb-anmeldung.streamlit.app', { waitUntil: 'networkidle', timeout: 60000 });
+            
+            // Falls der "App geschlafen"-Button da ist, klicken wir ihn an
+            const wakeUpButton = page.locator('button:has-text(\"Yes, get this app back up\")');
+            if (await wakeUpButton.isVisible()) {
+                console.log('App schläft! Klicke auf den Aufwach-Button...');
+                await wakeUpButton.click();
+                // 15 Sekunden warten, damit die App Zeit zum Booten hat
+                await page.waitForTimeout(15000);
+            } else {
+                console.log('App war bereits hellwach.');
+            }
+            
+            // Kurz warten, um Aktivität zu registrieren
+            await page.waitForTimeout(5000);
+            await browser.close();
+            console.log('Vorgang erfolgreich beendet.');
+          })();
+          "
