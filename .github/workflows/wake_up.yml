@@ -21,26 +21,26 @@ jobs:
       - name: Install Chromium Browser
         run: npx playwright install chromium
 
-      - name: App im echten Browser laden & wecken
+      - name: Erstelle JavaScript-Skript
         run: |
-          node -e "
+          cat << 'EOF' > wake.js
           const { chromium } = require('playwright');
           (async () => {
+            console.log('Starte Browser...');
             const browser = await chromium.launch({ headless: true });
             const page = await browser.newPage();
             
             console.log('Rufe Streamlit App auf...');
             await page.goto('https://kecb-anmeldung.streamlit.app', { waitUntil: 'load', timeout: 60000 });
             
-            const wakeUpButton = page.locator('button:has-text(\"Yes, get this app back up\")');
+            const wakeUpButton = page.locator('button:has-text("Yes, get this app back up")');
             
             try {
-                // Wartet maximal 15 Sekunden, ob der Button da ist
+                // Wartet maximal 15 Sekunden auf den Button
                 await wakeUpButton.waitFor({ state: 'visible', timeout: 15000 });
                 console.log('App schläft! Klicke auf den Aufwach-Button...');
                 await wakeUpButton.click();
                 
-                // 45 Sekunden warten, damit der Container komplett hochfahren kann
                 console.log('Warte 45 Sekunden auf den Boot-Vorgang...');
                 await page.waitForTimeout(45000);
             } catch (error) {
@@ -51,4 +51,7 @@ jobs:
             await browser.close();
             console.log('Vorgang erfolgreich beendet.');
           })();
-          "
+          EOF
+
+      - name: App im echten Browser laden & wecken
+        run: node wake.js
