@@ -4,7 +4,7 @@ on:
   schedule:
     # Läuft jede Stunde zur vollen Stunde
     - cron: '0 * * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Erlaubt manuelles Starten zum Testen
 
 jobs:
   wake_up:
@@ -15,8 +15,11 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Playwright
+      - name: Install Playwright (Bibliothek)
         run: npm install playwright
+
+      - name: Install Chromium Browser
+        run: npx playwright install chromium
 
       - name: App im echten Browser laden & wecken
         run: |
@@ -27,27 +30,23 @@ jobs:
             const page = await browser.newPage();
             
             console.log('Rufe Streamlit App auf...');
-            // networkidle reicht oft nicht, wir warten bis die Seite grundlegend da ist
             await page.goto('https://kecb-anmeldung.streamlit.app', { waitUntil: 'load', timeout: 60000 });
             
             const wakeUpButton = page.locator('button:has-text(\"Yes, get this app back up\")');
             
             try {
-                // Wartet bis zu 15 Sekunden, ob der Button auftaucht
+                // Wartet maximal 15 Sekunden, ob der Button da ist
                 await wakeUpButton.waitFor({ state: 'visible', timeout: 15000 });
                 console.log('App schläft! Klicke auf den Aufwach-Button...');
                 await wakeUpButton.click();
                 
-                // Streamlit braucht Zeit zum Booten. Wir geben ihr 45 Sekunden.
-                console.log('Warte 45 Sekunden, damit die App hochfahren kann...');
+                // 45 Sekunden warten, damit der Container komplett hochfahren kann
+                console.log('Warte 45 Sekunden auf den Boot-Vorgang...');
                 await page.waitForTimeout(45000);
             } catch (error) {
-                // Wenn der Button innerhalb von 15s nicht kommt, war die App entweder schon wach
-                // oder das Haupt-Layout von Streamlit ist bereits da.
                 console.log('Kein Aufwach-Button erschienen. App ist vermutlich schon wach.');
             }
             
-            // Ein kurzer finaler Check, ob der Body Inhalt hat
             await page.waitForTimeout(5000);
             await browser.close();
             console.log('Vorgang erfolgreich beendet.');
