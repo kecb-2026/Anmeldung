@@ -663,6 +663,9 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
     elif warnung_text:
         st.error(f"Absenden blockiert weil Sie einen falsche Klasse ausgewählt haben: {warnung_text}")
     else:
+        with st.spinner("Anmeldung wird verarbeitet... Bitte warten."):
+
+
         neue_anmeldung = {
             "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
             "Ausstellungsort": ausstellungsort,
