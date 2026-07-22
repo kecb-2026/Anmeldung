@@ -309,7 +309,7 @@ def sende_bestaetigungs_email(daten):
         f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
         f"Geschlecht: {daten.get('Geschlecht', '')}\n"
         f"Kastriert: {daten.get('Kastrat', '')}\n"
-        f"Züchter & Land: {daten.get('Zuechter', '')}\n\n        
+        f"Züchter & Land: {daten.get('Zuechter', '')}\n\n"     
         f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
         f"Gewicht: {daten.get('Gewicht', '-')} kg\n\n"
         
@@ -318,7 +318,7 @@ def sende_bestaetigungs_email(daten):
         f"Zuchtbuch-Nr Vater: {daten.get('Vater_Zuchtbuch', '')}\n"
         f"Mutter: {daten.get('Mutter_Name', '')} ({daten.get('Mutter_EMS', '')})\n"
         f"Zuchtbuch-Nr Mutter: {daten.get('Mutter_Zuchtbuch', '')}\n"
-"
+
         
         f"--- AUSSTELLER ---\n"
         f"Name: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n"
