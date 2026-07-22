@@ -625,9 +625,9 @@ aussteller_email = st.text_input("E-Mail-Adresse *")
 col18, col19 = st.columns([2, 1])
 
 
-# --- Aussteller Verein Dropdown ---
+# --- Aussteller Verein ---
 vereins_optionen = list(VEREINS_EMAILS.keys())
-gewaehlter_verein = col18.selectbox("Verein *", ["-- Bitte wählen --"] + vereins_optionen)
+gewaehlter_verein = st.selectbox("Verein *", ["-- Bitte wählen --"] + vereins_optionen)
 
 aussteller_verein = ""
 vereins_email_export = ""
@@ -642,11 +642,6 @@ if gewaehlter_verein != "-- Bitte wählen --":
     else:
         aussteller_verein = gewaehlter_verein
         st.info(f"📧 Eine Kopie wird automatisch an **{vereins_email_export}** gesendet.")
-
-aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
-
-#aussteller_verein = col18.text_input("Verein *")
-#aussteller_mitgliedsnr = col19.text_input("Mitglieds-Nr.")
 
 # --- BEMERKUNGEN & ABSENDEN ---
 st.subheader("5. Bemerkungen & Einverständnis")
