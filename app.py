@@ -309,6 +309,7 @@ def sende_bestaetigungs_email(daten):
         f"Geburtsdatum: {daten.get('Geburtsdatum', '')}\n"
         f"Geschlecht: {daten.get('Geschlecht', '')}\n"
         f"Kastriert: {daten.get('Kastrat', '')}\n"
+        f"Züchter & Land: {daten.get('Zuechter', '')}\n\n        
         f"Klasse: {daten.get('Angemeldete_Klasse', '')}\n"
         f"Gewicht: {daten.get('Gewicht', '-')} kg\n\n"
         
@@ -317,7 +318,7 @@ def sende_bestaetigungs_email(daten):
         f"Zuchtbuch-Nr Vater: {daten.get('Vater_Zuchtbuch', '')}\n"
         f"Mutter: {daten.get('Mutter_Name', '')} ({daten.get('Mutter_EMS', '')})\n"
         f"Zuchtbuch-Nr Mutter: {daten.get('Mutter_Zuchtbuch', '')}\n"
-        f"Züchter & Land: {daten.get('Zuechter', '')}\n\n"
+"
         
         f"--- AUSSTELLER ---\n"
         f"Name: {daten.get('Aussteller_Vorname', '')} {daten.get('Aussteller_Nachname', '')}\n"
@@ -528,7 +529,12 @@ with col11:
     kast_index = 0 if st.session_state.k_kastriert == "Ja" else 1
     katze_kastriert = st.radio("Kastrat? *", ["Ja", "Nein"], index=kast_index)
 
+# NEW: Feld Züchter + Land hier neu eingefügt
+zuechter_name_land = st.text_input("Züchter + Land *", value=st.session_state.z_zuechter)
+
 # --- KLASSEN-LISTE ---
+# (hier folgt dein bestehender Code für die Klassen)
+
 gemeinsame_klassen = [
     "11. Klasse 8-12 Monate",
     "12. Klasse 4-8 Monate",
@@ -587,7 +593,7 @@ if not st.session_state.k_zuchtbuch:
         mutter_name = st.text_input("Name der Mutter *", value=st.session_state.m_name)
         mutter_ems = st.text_input("EMS-Code Mutter *", value=st.session_state.m_ems)
         mutter_zuchtbuch = st.text_input("Zuchtbuch-Nr. Mutter *", value=st.session_state.m_zuchtbuch)
-        zuechter_name_land = st.text_input("Züchter + Land *", key="zuechter_input_1")
+        #zuechter_name_land = st.text_input("Züchter + Land *", key="zuechter_input_1")
 else:
     vater_name = st.session_state.v_name
     vater_ems = st.session_state.v_ems
@@ -595,7 +601,7 @@ else:
     mutter_name = st.session_state.m_name
     mutter_ems = st.session_state.m_ems
     mutter_zuchtbuch = st.session_state.m_zuchtbuch
-    zuechter_name_land = st.session_state.z_zuechter
+    #zuechter_name_land = st.session_state.z_zuechter
 
 # --- AUSSTELLER ---
 st.subheader("4. Aussteller & Züchter")
