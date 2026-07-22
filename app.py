@@ -575,7 +575,7 @@ if warnung_text:
 if hinweis_ummeldung:
     st.warning(f"⚠️ {hinweis_ummeldung}")
 
-katze_gewicht = st.text_input("Gewicht der Katze (kg)")
+katze_gewicht = st.text_input("Gewicht der Katze (kg) *")
 
 # --- STAMMBAUM & ZÜCHTER ---
 if not st.session_state.k_zuchtbuch:
