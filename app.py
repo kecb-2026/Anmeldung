@@ -650,7 +650,7 @@ bemerkungen = st.text_area("Bemerkungen")
 agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akzeptiere die FIFé/FFH Regeln. *")
 
 if st.button("Anmeldung verbindlich absenden", type="primary"):
-    if not (ausstellungsort and katze_name and aussteller_nachname and aussteller_email and agb_akzeptiert):
+    if not (ausstellungsort and katze_name and katze_gewicht and aussteller_nachname and aussteller_email and agb_akzeptiert):
         st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
     elif ausstellungsklasse == "-":
         st.error("Bitte wählen Sie eine Ausstellungsklasse!")
