@@ -656,12 +656,52 @@ bemerkungen = st.text_area("Bemerkungen")
 agb_akzeptiert = st.checkbox("Ich bestätige die Richtigkeit der Angaben und akzeptiere die FIFé/FFH Regeln. *")
 
 if st.button("Anmeldung verbindlich absenden", type="primary"):
-    if not (ausstellungsort and katze_name and katze_gewicht and aussteller_nachname and aussteller_email and agb_akzeptiert):
-        st.error("Bitte füllen Sie alle Pflichtfelder (*) aus.")
+    # 1. Alle Stern-Felder (*) auf Vollständigkeit prüfen
+    pflichtfelder_fehlend = []
+
+    if not ausstellungsort: pflichtfelder_fehlend.append("Ausstellungsort")
+    if not (samstag_aktiv or sonntag_aktiv): pflichtfelder_fehlend.append("Ausstellungstag (Mindestens Samstag oder Sonntag wählen)")
+    if not katze_name: pflichtfelder_fehlend.append("Titel + Name der Katze")
+    if not katze_ems: pflichtfelder_fehlend.append("EMS-Code")
+    if not katze_rasse_farbe: pflichtfelder_fehlend.append("Rasse + Farbe")
+    if not katze_zuchtbuch: pflichtfelder_fehlend.append("Zuchtbuch-Nr.")
+    if not katze_geboren: pflichtfelder_fehlend.append("Geburtsdatum")
+    if not zuechter_name_land: pflichtfelder_fehlend.append("Züchter + Land")
+    if not katze_gewicht: pflichtfelder_fehlend.append("Gewicht der Katze")
+    
+    # Stammbaum-Prüfung (falls Zuchtbuch der Katze nicht vorausgefüllt war)
+    if not st.session_state.k_zuchtbuch:
+        if not vater_name: pflichtfelder_fehlend.append("Name des Vaters")
+        if not vater_ems: pflichtfelder_fehlend.append("EMS-Code Vater")
+        if not vater_zuchtbuch: pflichtfelder_fehlend.append("Zuchtbuch-Nr. Vater")
+        if not mutter_name: pflichtfelder_fehlend.append("Name der Mutter")
+        if not mutter_ems: pflichtfelder_fehlend.append("EMS-Code Mutter")
+        if not mutter_zuchtbuch: pflichtfelder_fehlend.append("Zuchtbuch-Nr. Mutter")
+
+    # Aussteller-Pflichtfelder
+    if not aussteller_nachname: pflichtfelder_fehlend.append("Nachname Aussteller")
+    if not aussteller_vorname: pflichtfelder_fehlend.append("Vorname Aussteller")
+    if not aussteller_strasse: pflichtfelder_fehlend.append("Strasse, Nr.")
+    if not aussteller_ort: pflichtfelder_fehlend.append("PLZ + Ort")
+    if not aussteller_land: pflichtfelder_fehlend.append("Land")
+    if not aussteller_telefon: pflichtfelder_fehlend.append("Telefon")
+    if not aussteller_email: pflichtfelder_fehlend.append("E-Mail-Adresse")
+    if not aussteller_verein or gewaehlter_verein == "-- Bitte wählen --": pflichtfelder_fehlend.append("Verein")
+
+    if not agb_akzeptiert: pflichtfelder_fehlend.append("Bestätigung der FIFé/FFH Regeln (AGB)")
+
+    # 2. Auswertung der Prüfungen
+    if pflichtfelder_fehlend:
+        st.error("Bitte füllen Sie alle Pflichtfelder (*) aus. Es fehlen noch:")
+        for feld in pflichtfelder_fehlend:
+            st.write(f"• **{feld}**")
+
     elif ausstellungsklasse == "-":
-        st.error("Bitte wählen Sie eine Ausstellungsklasse!")
+        st.error("Bitte wählen Sie eine gültige Ausstellungsklasse!")
+
     elif warnung_text:
-        st.error(f"Absenden blockiert weil Sie einen falsche Klasse ausgewählt haben: {warnung_text}")
+        st.error(f"Absenden blockiert, weil eine falsche Klasse gewählt wurde: {warnung_text}")
+
     else:
         with st.spinner("Anmeldung wird verarbeitet... Bitte warten."):
             neue_anmeldung = {
@@ -694,6 +734,7 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
                 "Telefon": aussteller_telefon,
                 "Email": aussteller_email,
                 "Verein": aussteller_verein,
+                "Vereins_Email": vereins_email_export,
                 "Doppelkafig": doppelkafig,
                 "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
                 "Bemerkungen": bemerkungen if bemerkungen else "Keine"
