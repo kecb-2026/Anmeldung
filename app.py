@@ -664,49 +664,48 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
         st.error(f"Absenden blockiert weil Sie einen falsche Klasse ausgewählt haben: {warnung_text}")
     else:
         with st.spinner("Anmeldung wird verarbeitet... Bitte warten."):
+            neue_anmeldung = {
+                "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
+                "Ausstellungsort": ausstellungsort,
+                "Angemeldete_Tage": wochentag_export,
+                "Katze_Name": katze_name,
+                "Katze_EMS": katze_ems,
+                "Gruppe": katze_gruppe,
+                "Rasse_Farbe": katze_rasse_farbe,
+                "Zuchtbuch_Nr": katze_zuchtbuch,
+                "Chip_Nr": katze_chip,
+                "Geburtsdatum": katze_geboren.strftime("%d.%m.%Y"),
+                "Geschlecht": katze_geschlecht,
+                "Kastrat": katze_kastriert,
+                "Zuechter": zuechter_name_land,
+                "Angemeldete_Klasse": ausstellungsklasse,
+                "Gewicht": katze_gewicht,
+                "Vater_Name": vater_name,
+                "Vater_EMS": vater_ems,
+                "Vater_Zuchtbuch": vater_zuchtbuch,
+                "Mutter_Name": mutter_name,
+                "Mutter_EMS": mutter_ems,
+                "Mutter_Zuchtbuch": mutter_zuchtbuch,
+                "Aussteller_Nachname": aussteller_nachname,
+                "Aussteller_Vorname": aussteller_vorname,
+                "Strasse": aussteller_strasse,
+                "PLZ_Ort": aussteller_ort,
+                "Land": aussteller_land,
+                "Telefon": aussteller_telefon,
+                "Email": aussteller_email,
+                "Verein": aussteller_verein,
+                "Doppelkafig": doppelkafig,
+                "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
+                "Bemerkungen": bemerkungen if bemerkungen else "Keine"
+            }
 
-
-        neue_anmeldung = {
-            "Eingangsdatum": datetime.now().strftime("%d.%m.%Y %H:%M:%S"),
-            "Ausstellungsort": ausstellungsort,
-            "Angemeldete_Tage": wochentag_export,
-            "Katze_Name": katze_name,
-            "Katze_EMS": katze_ems,
-            "Gruppe": katze_gruppe,
-            "Rasse_Farbe": katze_rasse_farbe,
-            "Zuchtbuch_Nr": katze_zuchtbuch,
-            "Chip_Nr": katze_chip,
-            "Geburtsdatum": katze_geboren.strftime("%d.%m.%Y"),
-            "Geschlecht": katze_geschlecht,
-            "Kastrat": katze_kastriert,
-            "Angemeldete_Klasse": ausstellungsklasse,
-            "Gewicht": katze_gewicht,
-            "Vater_Name": vater_name,
-            "Vater_EMS": vater_ems,
-            "Vater_Zuchtbuch": vater_zuchtbuch,
-            "Mutter_Name": mutter_name,
-            "Mutter_EMS": mutter_ems,
-            "Mutter_Zuchtbuch": mutter_zuchtbuch,
-            "Aussteller_Nachname": aussteller_nachname,
-            "Aussteller_Vorname": aussteller_vorname,
-            "Strasse": aussteller_strasse,
-            "PLZ_Ort": aussteller_ort,
-            "Land": aussteller_land,
-            "Telefon": aussteller_telefon,
-            "Email": aussteller_email,
-            "Verein": aussteller_verein,
-            "Zuechter": zuechter_name_land,
-            "Doppelkafig": doppelkafig,
-            "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
-            "Bemerkungen": bemerkungen if bemerkungen else "Keine"
-        }
-        try:
-            save_to_google_sheet(neue_anmeldung)
-            sende_bestaetigungs_email(neue_anmeldung)
-            st.success("Besten Dank für Ihre Anmeldung!")
-            st.balloons()
-        except Exception as e:
-            st.error(f"Fehler beim Übermitteln der Anmeldung: {e}")
+            try:
+                save_to_google_sheet(neue_anmeldung)
+                sende_bestaetigungs_email(neue_anmeldung)
+                st.success("Besten Dank für Ihre Anmeldung!")
+                st.balloons()
+            except Exception as e:
+                st.error(f"Fehler beim Übermitteln der Anmeldung: {e}")
 
 ## --- ADMIN ---
 import io 
