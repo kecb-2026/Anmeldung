@@ -324,7 +324,8 @@ def sende_bestaetigungs_email(daten):
         f"Adresse: {daten.get('Strasse', '')}, {daten.get('PLZ_Ort', '')} ({daten.get('Land', '')})\n"
         f"Telefon: {daten.get('Telefon', '')}\n"
         f"E-Mail: {daten.get('Email', '')}\n"
-        f"Verein: {daten.get('Verein', '')} (Mitglieds-Nr: {daten.get('MitgliedsNr', '-')})\n\n"
+        f"Verein: {daten.get('Verein', '')}\n\n"
+
         
         f"--- BEMERKUNGEN & WEITERES ---\n"
         f"Doppelkäfig zusammen mit: {daten.get('Doppelkafig', 'Keine Angabe')}\n"
@@ -622,6 +623,8 @@ aussteller_land = col16.text_input("Land *", value=st.session_state.a_land)
 aussteller_telefon = col17.text_input("Telefon *")
 aussteller_email = st.text_input("E-Mail-Adresse *")
 col18, col19 = st.columns([2, 1])
+
+
 # --- Aussteller Verein Dropdown ---
 vereins_optionen = list(VEREINS_EMAILS.keys())
 gewaehlter_verein = col18.selectbox("Verein *", ["-- Bitte wählen --"] + vereins_optionen)
@@ -688,7 +691,6 @@ if st.button("Anmeldung verbindlich absenden", type="primary"):
             "Telefon": aussteller_telefon,
             "Email": aussteller_email,
             "Verein": aussteller_verein,
-            "MitgliedsNr": aussteller_mitgliedsnr,
             "Zuechter": zuechter_name_land,
             "Doppelkafig": doppelkafig,
             "Hinweis_Ummeldung": hinweis_ummeldung if hinweis_ummeldung else "",
