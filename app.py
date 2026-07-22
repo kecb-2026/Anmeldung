@@ -297,7 +297,7 @@ def sende_bestaetigungs_email(daten):
     daten_block = (
         f"--- AUSSTELLUNGSDETAILS ---\n"
         f"Ausstellungsort: {daten.get('Ausstellungsort', '')}\n"
-        f"Angemeldete Tage: {daten.get('Angemeltete_Tage', '')}\n\n"
+        f"Angemeldete Tage: {daten.get('Angemeldete_Tage', '')}\n\n"
         
         f"--- KATZENDETAILS ---\n"
         f"Name: {daten.get('Katze_Name', '')}\n"
